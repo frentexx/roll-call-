@@ -89,6 +89,53 @@
 <body>
 
     <div class="container-card">
+        <!-- Firebase 配置表單 -->
+        <div id="firebase-config-form" class="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+            <h2 class="text-xl font-bold text-gray-800 mb-4">Firebase 配置設定</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label for="firebase-api-key" class="block text-sm font-medium text-gray-700 mb-1">API Key:</label>
+                    <input type="text" id="firebase-api-key" placeholder="輸入 Firebase API Key" 
+                           class="w-full p-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <div>
+                    <label for="firebase-auth-domain" class="block text-sm font-medium text-gray-700 mb-1">Auth Domain:</label>
+                    <input type="text" id="firebase-auth-domain" placeholder="輸入 Firebase Auth Domain" 
+                           class="w-full p-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <div>
+                    <label for="firebase-project-id" class="block text-sm font-medium text-gray-700 mb-1">Project ID:</label>
+                    <input type="text" id="firebase-project-id" placeholder="輸入 Firebase Project ID" 
+                           class="w-full p-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <div>
+                    <label for="firebase-storage-bucket" class="block text-sm font-medium text-gray-700 mb-1">Storage Bucket:</label>
+                    <input type="text" id="firebase-storage-bucket" placeholder="輸入 Firebase Storage Bucket" 
+                           class="w-full p-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <div>
+                    <label for="firebase-messaging-sender-id" class="block text-sm font-medium text-gray-700 mb-1">Messaging Sender ID:</label>
+                    <input type="text" id="firebase-messaging-sender-id" placeholder="輸入 Firebase Messaging Sender ID" 
+                           class="w-full p-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <div>
+                    <label for="firebase-app-id" class="block text-sm font-medium text-gray-700 mb-1">App ID:</label>
+                    <input type="text" id="firebase-app-id" placeholder="輸入 Firebase App ID" 
+                           class="w-full p-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                </div>
+            </div>
+            <div class="flex justify-between mt-4">
+                <button onclick="useDefaultFirebaseConfig()" 
+                        class="px-4 py-2 bg-yellow-500 text-white text-sm font-semibold rounded-lg shadow-md hover:bg-yellow-600 transition duration-150">
+                    使用預設配置
+                </button>
+                <button onclick="saveFirebaseConfig()" 
+                        class="px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg shadow-md hover:bg-blue-700 transition duration-150">
+                    儲存自訂配置
+                </button>
+            </div>
+        </div>
+        
         <!-- 標題與控制項 -->
         <header class="mb-6 pb-4 border-b border-gray-200 flex justify-between items-center flex-wrap">
             <h1 class="text-3xl font-extrabold text-blue-800 tracking-tight">
@@ -340,8 +387,8 @@
         // 啟用 Firebase 偵錯日誌 (除錯用)
         setLogLevel('debug');
 
-        // --- 外部 Firebase 配置 (保持不變) ---
-        const externalFirebaseConfig = {
+        // --- 預設 Firebase 配置 ---
+        const defaultFirebaseConfig = {
             apiKey: "AIzaSyAko3jZkh_OGTw7kqxFwhX5SRJtbNll0Cw",
             authDomain: "roll-ppshclass.firebaseapp.com",
             projectId: "roll-ppshclass",
@@ -350,6 +397,17 @@
             appId: "1:690929841439:web:9f3653ce07e64ba461ac2a",
             measurementId: "G-WYP0NLT1RD"
         };
+        
+        // --- 從 localStorage 載入 Firebase 配置 ---
+        function loadFirebaseConfig() {
+            const savedConfig = localStorage.getItem('firebaseConfig');
+            return savedConfig ? JSON.parse(savedConfig) : defaultFirebaseConfig;
+        }
+        
+        // --- 將 Firebase 配置儲存到 localStorage ---
+        function saveFirebaseConfigToLocal(config) {
+            localStorage.setItem('firebaseConfig', JSON.stringify(config));
+        }
         
         // --- 全域變數與常量 ---
         const ADMIN_PASSWORD = 'admin123'; 
@@ -379,11 +437,13 @@
         const LEAVE_REQUESTS_PATH = `leave_requests`;
         const ROSTER_PATH = `roster/class_data`; 
 
-        // --- Firebase 初始化與驗證 (保持不變) ---
+        // --- Firebase 初始化與驗證 ---
 
-        async function initFirebase() {
+        async function initFirebase(config = null) {
             try {
-                const app = initializeApp(externalFirebaseConfig);
+                // 如果未提供配置，從 localStorage 載入
+                const firebaseConfig = config || loadFirebaseConfig();
+                const app = initializeApp(firebaseConfig);
                 db = getFirestore(app);
                 auth = getAuth(app);
                 
@@ -1232,6 +1292,91 @@
         }
 
 
+        // --- Firebase 配置表單處理函數 ---
+        
+        /**
+         * 從表單獲取 Firebase 配置
+         */
+        function getConfigFromForm() {
+            return {
+                apiKey: document.getElementById('firebase-api-key').value.trim(),
+                authDomain: document.getElementById('firebase-auth-domain').value.trim(),
+                projectId: document.getElementById('firebase-project-id').value.trim(),
+                storageBucket: document.getElementById('firebase-storage-bucket').value.trim(),
+                messagingSenderId: document.getElementById('firebase-messaging-sender-id').value.trim(),
+                appId: document.getElementById('firebase-app-id').value.trim()
+            };
+        }
+        
+        /**
+         * 將 Firebase 配置填入表單
+         */
+        function fillConfigForm(config) {
+            document.getElementById('firebase-api-key').value = config.apiKey || '';
+            document.getElementById('firebase-auth-domain').value = config.authDomain || '';
+            document.getElementById('firebase-project-id').value = config.projectId || '';
+            document.getElementById('firebase-storage-bucket').value = config.storageBucket || '';
+            document.getElementById('firebase-messaging-sender-id').value = config.messagingSenderId || '';
+            document.getElementById('firebase-app-id').value = config.appId || '';
+        }
+        
+        /**
+         * 儲存自訂 Firebase 配置
+         */
+        window.saveFirebaseConfig = function() {
+            const config = getConfigFromForm();
+            
+            // 驗證必要欄位
+            if (!config.apiKey || !config.projectId || !config.appId) {
+                showMessage('請至少填寫 API Key、Project ID 和 App ID', 'error');
+                return;
+            }
+            
+            try {
+                // 儲存到 localStorage
+                saveFirebaseConfigToLocal(config);
+                
+                // 重新初始化 Firebase
+                initFirebase(config)
+                    .then(() => {
+                        showMessage('Firebase 配置已更新並生效！', 'success');
+                    })
+                    .catch(error => {
+                        console.error('重新初始化 Firebase 失敗:', error);
+                        showMessage('配置無效，請檢查您的輸入。', 'error');
+                    });
+            } catch (error) {
+                console.error('儲存 Firebase 配置失敗:', error);
+                showMessage('儲存配置失敗，請重試。', 'error');
+            }
+        }
+        
+        /**
+         * 使用預設 Firebase 配置
+         */
+        window.useDefaultFirebaseConfig = function() {
+            try {
+                // 填入預設配置到表單
+                fillConfigForm(defaultFirebaseConfig);
+                
+                // 儲存到 localStorage
+                saveFirebaseConfigToLocal(defaultFirebaseConfig);
+                
+                // 重新初始化 Firebase
+                initFirebase(defaultFirebaseConfig)
+                    .then(() => {
+                        showMessage('已切換到預設 Firebase 配置！', 'success');
+                    })
+                    .catch(error => {
+                        console.error('重新初始化 Firebase 失敗:', error);
+                        showMessage('切換配置失敗，請重試。', 'error');
+                    });
+            } catch (error) {
+                console.error('使用預設配置失敗:', error);
+                showMessage('使用預設配置失敗，請重試。', 'error');
+            }
+        }
+        
         // 程式啟動點
         window.onload = function() {
             if (typeof initializeApp === 'undefined') {
@@ -1239,7 +1384,22 @@
                 showMessage('系統核心載入失敗，請檢查網路連接。', 'error');
                 return;
             }
-            initFirebase();
+            
+            // 載入儲存的配置並填入表單
+            const savedConfig = loadFirebaseConfig();
+            fillConfigForm(savedConfig);
+            
+            // 初始化 Firebase
+            initFirebase(savedConfig)
+                .then(() => {
+                    // 自動應用最新配置
+                    showMessage('Firebase 配置已自動應用！', 'success');
+                })
+                .catch(error => {
+                    console.error('初始化 Firebase 失敗:', error);
+                    showMessage('Firebase 初始化失敗，請檢查您的配置。', 'error');
+                });
+            
             // 初始狀態為入口畫面
             setAppState('entry');
         }
