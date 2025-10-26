@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <!-- 設定字體為 Inter -->
     <style>
-        @import url('https://fonts.fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
         body {
             font-family: 'Inter', sans-serif;
             background-color: #f4f7f9;
@@ -45,12 +45,10 @@
         }
         
         /* --- 點名區塊專用樣式 --- */
-        /* Updated styles for the Roll Call Number Block (The large colored square) */
         .rollcall-number-block {
             @apply w-full aspect-square flex items-center justify-center text-white font-extrabold text-3xl rounded-xl shadow-lg transition-all duration-200;
         }
 
-        /* Status colors for the Number Block, matching the vibrant green in the image */
         .rollcall-number-block.Present {
             background-color: #10B981; /* Vibrant Green */
         }
@@ -64,10 +62,8 @@
             background-color: #3B82F6; /* Blue for Leave */
         }
         
-        /* Status text color above the block */
         .rollcall-status-text {
-             color: #1f2937; /* Gray-800 for visibility */
-             /* Add a slight drop shadow for emphasis */
+             color: #1f2937;
              text-shadow: 0 1px 1px rgba(0,0,0,0.1);
         }
 
@@ -89,53 +85,6 @@
 <body>
 
     <div class="container-card">
-        <!-- Firebase 配置表單 -->
-        <div id="firebase-config-form" class="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
-            <h2 class="text-xl font-bold text-gray-800 mb-4">Firebase 配置設定</h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <label for="firebase-api-key" class="block text-sm font-medium text-gray-700 mb-1">API Key:</label>
-                    <input type="text" id="firebase-api-key" placeholder="輸入 Firebase API Key" 
-                           class="w-full p-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
-                </div>
-                <div>
-                    <label for="firebase-auth-domain" class="block text-sm font-medium text-gray-700 mb-1">Auth Domain:</label>
-                    <input type="text" id="firebase-auth-domain" placeholder="輸入 Firebase Auth Domain" 
-                           class="w-full p-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
-                </div>
-                <div>
-                    <label for="firebase-project-id" class="block text-sm font-medium text-gray-700 mb-1">Project ID:</label>
-                    <input type="text" id="firebase-project-id" placeholder="輸入 Firebase Project ID" 
-                           class="w-full p-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
-                </div>
-                <div>
-                    <label for="firebase-storage-bucket" class="block text-sm font-medium text-gray-700 mb-1">Storage Bucket:</label>
-                    <input type="text" id="firebase-storage-bucket" placeholder="輸入 Firebase Storage Bucket" 
-                           class="w-full p-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
-                </div>
-                <div>
-                    <label for="firebase-messaging-sender-id" class="block text-sm font-medium text-gray-700 mb-1">Messaging Sender ID:</label>
-                    <input type="text" id="firebase-messaging-sender-id" placeholder="輸入 Firebase Messaging Sender ID" 
-                           class="w-full p-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
-                </div>
-                <div>
-                    <label for="firebase-app-id" class="block text-sm font-medium text-gray-700 mb-1">App ID:</label>
-                    <input type="text" id="firebase-app-id" placeholder="輸入 Firebase App ID" 
-                           class="w-full p-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
-                </div>
-            </div>
-            <div class="flex justify-between mt-4">
-                <button onclick="useDefaultFirebaseConfig()" 
-                        class="px-4 py-2 bg-yellow-500 text-white text-sm font-semibold rounded-lg shadow-md hover:bg-yellow-600 transition duration-150">
-                    使用預設配置
-                </button>
-                <button onclick="saveFirebaseConfig()" 
-                        class="px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg shadow-md hover:bg-blue-700 transition duration-150">
-                    儲存自訂配置
-                </button>
-            </div>
-        </div>
-        
         <!-- 標題與控制項 -->
         <header class="mb-6 pb-4 border-b border-gray-200 flex justify-between items-center flex-wrap">
             <h1 class="text-3xl font-extrabold text-blue-800 tracking-tight">
@@ -181,7 +130,7 @@
              </button>
         </div>
         
-        <!-- 3. 學生視圖內容 (已移除點名功能，請假改為日期時間區間) -->
+        <!-- 3. 學生視圖內容 -->
         <div id="student-view-content" class="hidden">
             
             <!-- 學生身份選擇 -->
@@ -190,12 +139,11 @@
                 <select id="student-select" onchange="updateStudentIdentity()"
                         class="w-full p-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
                     <option value="" disabled selected>-- 請先載入名單 (或班級尚未設定名單) --</option>
-                    <!-- 學生名單將在此處載入 -->
                 </select>
                 <p id="selected-student-info" class="text-sm text-gray-500 mt-2">尚未選擇身份，無法操作請假。</p>
             </div>
 
-            <!-- 請假申請區塊 (日期時間範圍) -->
+            <!-- 請假申請區塊 -->
             <section class="mb-8 p-6 bg-blue-50 border-l-4 border-blue-500 rounded-lg shadow-lg">
                 <h2 class="text-2xl font-bold text-blue-700 mb-4">請假申請 (日期時間範圍)</h2>
                 <form id="leave-request-form" onsubmit="submitLeave(event)" class="space-y-4">
@@ -240,7 +188,7 @@
                 </form>
             </section>
 
-            <!-- 我的請假申請 (點名紀錄已移除) -->
+            <!-- 我的請假申請 -->
             <section class="p-6 bg-white rounded-lg shadow-lg border border-gray-200">
                 <h3 class="text-xl font-semibold text-gray-800 mb-3 border-b pb-2">我的請假申請</h3>
                 <ul id="my-leave-list" class="divide-y divide-gray-100">
@@ -249,7 +197,7 @@
             </section>
         </div>
 
-        <!-- 4. 管理員視圖內容 (重構) -->
+        <!-- 4. 管理員視圖內容 -->
         <div id="admin-view-content" class="hidden">
              <h2 class="text-3xl font-bold text-indigo-700 mb-6">教師操作介面</h2>
 
@@ -278,7 +226,6 @@
 
                 <!-- 檔案上傳 -->
                 <div class="p-4 bg-green-50 border-l-4 border-green-500 rounded-lg mb-4">
-                    <!-- 提示訊息已修改，說明編碼問題 -->
                     <p class="text-sm text-green-700 mb-3">請透過 CSV 匯入學生名單 (請確保 CSV 檔案包含標題列，**系統預設使用 Big5 編碼讀取**，以確保中文字元正確顯示。)</p>
                     <div class="flex flex-col sm:flex-row gap-3 items-center">
                         <input type="file" id="roster-file-input" accept=".csv" class="w-full sm:flex-grow p-2 border border-green-300 rounded-lg bg-white">
@@ -289,7 +236,7 @@
                     </div>
                 </div>
                 
-                <!-- 學生清單預覽 (還原為圖片中的網格顯示) -->
+                <!-- 學生清單預覽 -->
                 <div id="roster-display-container">
                     <p class="text-sm font-medium text-gray-700 mb-2">當前學生名單預覽:</p>
                     <div id="roster-list-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 p-3 bg-gray-50 rounded-lg max-h-60 overflow-y-auto">
@@ -299,28 +246,26 @@
                 <p class="text-xs text-gray-400 mt-2">* 點名時將使用學號/ID 欄位作為學生識別。</p>
             </div>
             
-            <!-- ② 每日點名 (已更新為圖片樣式) -->
+            <!-- ② 每日點名 -->
             <div class="section-card">
                 <div class="section-header">
                     <i class="fas fa-check-circle section-icon"></i>
                     <h2 class="text-xl font-bold text-gray-800">每日點名 </h2>
                 </div>
                 
-                <!-- 日期選擇器 (加寬) -->
+                <!-- 日期選擇器 -->
                 <div class="flex flex-col sm:flex-row sm:items-center mb-6 gap-2">
                     <label for="roll-call-date" class="block text-sm font-medium text-gray-700 mr-4 whitespace-nowrap">選擇點名日期:</label>
-                    <!-- Date input uses w-full to match the image's layout -->
                     <input type="date" id="roll-call-date" 
                            class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-lg">
                 </div>
                 
-                <!-- 點名網格：3欄(手機)到9欄(桌機) -->
+                <!-- 點名網格 -->
                 <div id="roll-call-grid" class="grid grid-cols-3 sm:grid-cols-6 lg:grid-cols-9 gap-4 mb-6">
                     <p class="text-gray-500 col-span-full text-center">請先匯入班級名單。</p>
-                    <!-- 點名按鈕將在此處載入 -->
                 </div>
                 
-                <!-- 儲存按鈕 (更新文字和顏色) -->
+                <!-- 儲存按鈕 -->
                 <button onclick="saveDailyRollCall()"
                         class="w-full py-3 text-white font-bold rounded-lg shadow-xl transition duration-200 ease-in-out disabled:opacity-50 bg-[#1EAD61] hover:bg-[#159A55]"
                         id="save-roll-call-btn">
@@ -328,7 +273,7 @@
                 </button>
             </div>
 
-            <!-- ③ 請假單審核 (待審核列表) -->
+            <!-- ③ 請假單審核 -->
             <div class="section-card">
                 <div class="section-header">
                     <i class="fas fa-file-alt section-icon"></i>
@@ -377,153 +322,45 @@
 
     </div>
 
-    <!-- Firebase SDKs -->
+    <!-- 引入Firebase服務模塊 (配置信息在此文件中) -->
+    <script type="module" src="firebase-service.js"></script>
+    <!-- 主應用邏輯 -->
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged, setPersistence, browserSessionPersistence } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-auth.js";
-        import { getFirestore, doc, collection, query, addDoc, updateDoc, Timestamp, setDoc, where, getDocs, setLogLevel } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore.js";
-        import { onSnapshot } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore.js";
-        
-        // 啟用 Firebase 偵錯日誌 (除錯用)
-        setLogLevel('debug');
-
-        // --- 預設 Firebase 配置 ---
-        const defaultFirebaseConfig = {
-            apiKey: "AIzaSyAko3jZkh_OGTw7kqxFwhX5SRJtbNll0Cw",
-            authDomain: "roll-ppshclass.firebaseapp.com",
-            projectId: "roll-ppshclass",
-            storageBucket: "roll-ppshclass.firebasestorage.app",
-            messagingSenderId: "690929841439",
-            appId: "1:690929841439:web:9f3653ce07e64ba461ac2a",
-            measurementId: "G-WYP0NLT1RD"
-        };
-        
-        // --- 從 localStorage 載入 Firebase 配置 ---
-        function loadFirebaseConfig() {
-            const savedConfig = localStorage.getItem('firebaseConfig');
-            return savedConfig ? JSON.parse(savedConfig) : defaultFirebaseConfig;
-        }
-        
-        // --- 將 Firebase 配置儲存到 localStorage ---
-        function saveFirebaseConfigToLocal(config) {
-            localStorage.setItem('firebaseConfig', JSON.stringify(config));
-        }
+        // 從Firebase服務模塊導入所需功能
+        import { 
+            initFirebase, 
+            getDb, 
+            getAuth, 
+            getUserId,
+            getAttendanceRecords,
+            getLeaveRequests,
+            getStudentRoster,
+            getRosterHeaders,
+            getClassName,
+            uploadRoster,
+            saveClassName,
+            deleteRoster,
+            submitLeaveRequest,
+            updateLeaveStatus,
+            saveDailyRollCall,
+            initializeRollCallState,
+            getDailyRollCallState,
+            toggleStudentStatus,
+            searchLeaveHistory,
+            exportLeaveHistory
+        } from './firebase-service.js';
         
         // --- 全域變數與常量 ---
         const ADMIN_PASSWORD = 'admin123'; 
-        let db;
-        let auth;
-        let userId = null; // Session User ID (for device identification)
+        let appState = 'entry'; 
+        let currentAttendanceDate; 
+        let queryResults = []; 
         
-        // *** 學生身份追蹤 (用於請假紀錄) ***
+        // 學生身份追蹤
         let selectedStudentId = null; 
         let selectedStudentName = null; 
-        // ------------------------------------------
 
-        let appState = 'entry'; 
-        let attendanceRecords = []; 
-        let leaveRequests = []; 
-        let studentRoster = []; // 學生名單 [{id, name, number, ...other fields}]
-        let rosterHeaders = []; 
-        let className = "預設班級"; 
-        let queryResults = []; 
-
-        // 每日點名專用狀態
-        let currentAttendanceDate; 
-        let dailyRollCallState = {}; 
-        
-        // Firestore Collection Paths
-        const ATTENDANCE_PATH = `attendance`;
-        const LEAVE_REQUESTS_PATH = `leave_requests`;
-        const ROSTER_PATH = `roster/class_data`; 
-
-        // --- Firebase 初始化與驗證 ---
-
-        async function initFirebase(config = null) {
-            try {
-                // 如果未提供配置，從 localStorage 載入
-                const firebaseConfig = config || loadFirebaseConfig();
-                const app = initializeApp(firebaseConfig);
-                db = getFirestore(app);
-                auth = getAuth(app);
-                
-                await setPersistence(auth, browserSessionPersistence);
-                await signInAnonymously(auth);
-                
-                onAuthStateChanged(auth, (user) => {
-                    if (user) {
-                        userId = user.uid;
-                        document.getElementById('user-id-display').textContent = `會話 ID: ${userId.substring(0, 8)}...`;
-                        startFirestoreListeners();
-                    } else {
-                        userId = null;
-                        document.getElementById('user-id-display').textContent = '未登入';
-                    }
-                    renderUI(); 
-                });
-                
-            } catch (error) {
-                console.error("Firebase 初始化錯誤:", error);
-                showMessage('Firebase 初始化失敗，請檢查配置或網路連線。', 'error');
-            }
-        }
-        
-        // --- 學生身份選擇處理 (保持不變) ---
-
-        /**
-         * 渲染學生選擇下拉選單。
-         */
-        function renderStudentIdentitySelector() {
-            const select = document.getElementById('student-select');
-            
-            // 清空舊選項
-            select.innerHTML = ''; 
-
-            if (studentRoster.length === 0) {
-                select.innerHTML = '<option value="" disabled selected>-- 班級名單未設定 --</option>';
-            } else {
-                select.innerHTML = '<option value="" disabled selected>-- 請選擇您的姓名 --</option>';
-                
-                // 根據名單中的 id 和 name 建立選項
-                studentRoster.forEach(student => {
-                    // 將 {id, name} JSON 化作為 value，方便取用
-                    const value = JSON.stringify({ id: student.id, name: student.name });
-                    select.innerHTML += `<option value='${value}'>${student.number}號 - ${student.name} (${student.id})</option>`;
-                });
-            }
-        }
-        
-        /**
-         * 處理學生下拉選單選擇變動。
-         */
-        window.updateStudentIdentity = function() {
-            const select = document.getElementById('student-select');
-            const selectedValue = select.value;
-
-            if (selectedValue) {
-                try {
-                    const identity = JSON.parse(selectedValue);
-                    selectedStudentId = identity.id;
-                    selectedStudentName = identity.name;
-                    document.getElementById('selected-student-info').textContent = `已選擇: ${selectedStudentName} (學號: ${selectedStudentId})`;
-                    renderStudentRecords(); // 重新渲染學生的請假紀錄
-                } catch (e) {
-                    console.error("解析學生身份失敗:", e);
-                    selectedStudentId = null;
-                    selectedStudentName = null;
-                    document.getElementById('selected-student-info').textContent = `身份選擇錯誤。`;
-                }
-            } else {
-                selectedStudentId = null;
-                selectedStudentName = null;
-                document.getElementById('selected-student-info').textContent = `尚未選擇身份，無法操作請假。`;
-            }
-            // 重新渲染UI以啟用或禁用按鈕
-            renderUI();
-        }
-
-
-        // --- 狀態與角色切換邏輯 (保持不變) ---
+        // --- 狀態與角色切換邏輯 ---
         
         window.setAppState = function(newState) {
             appState = newState;
@@ -574,7 +411,7 @@
         });
 
 
-        // --- ① 班級名單管理功能 (保持不變) ---
+        // --- 班級名單管理功能 ---
         
         function parseCSV(csvText) {
             const lines = csvText.trim().split('\n');
@@ -604,7 +441,6 @@
                         student.id = student[idKey] || parts[0].trim(); 
                         student.name = student[nameKey] || parts[1].trim(); 
                         
-                        // 確保 ID 和 Name 存在
                         if (student.id && student.name) {
                              roster.push(student);
                         }
@@ -615,7 +451,7 @@
         }
 
         window.uploadRosterFile = function() {
-            if (appState !== 'admin' || !db) { showMessage('權限不足或系統未初始化。', 'error'); return; }
+            if (appState !== 'admin') { showMessage('權限不足。', 'error'); return; }
             const file = document.getElementById('roster-file-input').files[0];
             if (!file || file.name.slice(-4).toLowerCase() !== '.csv') { 
                 showMessage('請先選擇一個有效的 CSV 檔案。', 'warning'); return; 
@@ -626,245 +462,118 @@
                 const { roster: newRoster, headers: newHeaders } = parseCSV(e.target.result);
                 
                 if (newRoster.length === 0) {
-                    showMessage('CSV 檔案內容無效或格式錯誤 (請確保包含標題行和至少一筆資料)。', 'error'); return;
+                    showMessage('CSV 檔案內容無效或格式錯誤。', 'error'); return;
                 }
                 
-                saveRoster(newRoster, className, newHeaders); 
+                uploadRoster(newRoster, getClassName(), newHeaders); 
             };
             
             try {
                 reader.readAsText(file, 'Big5');
             } catch (error) {
                 console.warn("Big5 encoding not supported, falling back to UTF-8.", error);
-                showMessage('Big5 編碼讀取失敗，嘗試使用 UTF-8。若仍有亂碼，請將檔案轉為 UTF-8 編碼。', 'warning');
+                showMessage('Big5 編碼讀取失敗，嘗試使用 UTF-8。', 'warning');
                 reader.readAsText(file, 'UTF-8');
             }
-            
-        }
-        
-        function saveRoster(roster, name, headers) {
-            const docRef = doc(db, ROSTER_PATH);
-            setDoc(docRef, { 
-                list: JSON.stringify(roster), 
-                headers: JSON.stringify(headers), 
-                className: name,
-                updatedAt: Timestamp.now() 
-            })
-                .then(() => {
-                    showMessage(`名單成功上傳！共 ${roster.length} 筆學生資料。`, 'success');
-                    document.getElementById('roster-file-input').value = ''; 
-                })
-                .catch(error => {
-                    console.error("儲存名單失敗:", error);
-                    showMessage('儲存名單失敗，請查看控制台錯誤。', 'error');
-                });
         }
         
         window.saveClassName = function() {
             const newName = document.getElementById('class-name-input').value.trim();
             if (!newName) { showMessage('班級名稱不能為空。', 'warning'); return; }
-            if (studentRoster.length === 0) {
-                className = newName; 
-                document.getElementById('roster-count').textContent = `(共 0 人)`;
-                showMessage(`班級名稱已更新為 ${newName}，請上傳名單。`, 'success');
-                return;
-            }
-            saveRoster(studentRoster, newName, rosterHeaders); 
+            saveClassName(newName);
         }
 
         window.deleteRoster = function() {
             if (confirm("確定要刪除整個班級名單嗎？此操作不可逆。")) {
-                const docRef = doc(db, ROSTER_PATH);
-                setDoc(docRef, { 
-                    list: JSON.stringify([]), 
-                    headers: JSON.stringify([]), 
-                    className: className,
-                    updatedAt: Timestamp.now() 
-                })
-                .then(() => {
-                    showMessage('班級名單已清空。', 'success');
-                })
-                .catch(error => {
-                    console.error("清空名單失敗:", error);
-                    showMessage('清空名單失敗。', 'error');
-                });
+                deleteRoster();
             }
         }
         
         /**
-         * 從 Firestore 載入學生名單和標題。
+         * 渲染學生選擇下拉選單
          */
-        function loadRoster() {
-            if (!db) return;
-            const docRef = doc(db, ROSTER_PATH);
-            onSnapshot(docRef, (doc) => {
-                if (doc.exists()) {
-                    const data = doc.data();
-                    try {
-                        studentRoster = JSON.parse(data.list || '[]');
-                        rosterHeaders = JSON.parse(data.headers || '[]'); 
-                        className = data.className || "預設班級";
-                    } catch (e) {
-                        console.error("解析學生名單或標題失敗:", e);
-                        studentRoster = [];
-                        rosterHeaders = [];
-                    }
-                } else {
-                    studentRoster = [];
-                    rosterHeaders = [];
-                }
-                
-                // 學生名單更新時，需要重新渲染身份選擇器
-                renderStudentIdentitySelector(); 
+        function renderStudentIdentitySelector() {
+            const select = document.getElementById('student-select');
+            const studentRoster = getStudentRoster();
+            
+            select.innerHTML = ''; 
 
-                document.getElementById('roster-count').textContent = `(共 ${studentRoster.length} 人)`;
-                document.getElementById('class-name-input').value = className;
+            if (studentRoster.length === 0) {
+                select.innerHTML = '<option value="" disabled selected>-- 班級名單未設定 --</option>';
+            } else {
+                select.innerHTML = '<option value="" disabled selected>-- 請選擇您的姓名 --</option>';
                 
-                if (currentAttendanceDate) {
-                    initializeRollCallState(currentAttendanceDate);
-                }
-                
-                renderUI(); // 呼叫 UI 渲染，會根據 appState 決定顯示哪個介面
-            }, (error) => {
-                 console.error("Error listening to roster:", error);
-            });
+                studentRoster.forEach(student => {
+                    const value = JSON.stringify({ id: student.id, name: student.name });
+                    select.innerHTML += `<option value='${value}'>${student.number}號 - ${student.name} (${student.id})</option>`;
+                });
+            }
         }
 
-        // --- ② 每日點名功能 (更新為整合請假狀態) ---
+        /**
+         * 處理學生下拉選單選擇變動
+         */
+        window.updateStudentIdentity = function() {
+            const select = document.getElementById('student-select');
+            const selectedValue = select.value;
+
+            if (selectedValue) {
+                try {
+                    const identity = JSON.parse(selectedValue);
+                    selectedStudentId = identity.id;
+                    selectedStudentName = identity.name;
+                    document.getElementById('selected-student-info').textContent = `已選擇: ${selectedStudentName} (學號: ${selectedStudentId})`;
+                    renderStudentRecords();
+                } catch (e) {
+                    console.error("解析學生身份失敗:", e);
+                    selectedStudentId = null;
+                    selectedStudentName = null;
+                    document.getElementById('selected-student-info').textContent = `身份選擇錯誤。`;
+                }
+            } else {
+                selectedStudentId = null;
+                selectedStudentName = null;
+                document.getElementById('selected-student-info').textContent = `尚未選擇身份，無法操作請假。`;
+            }
+            renderUI();
+        }
+
+
+        // --- 每日點名功能 ---
         
         /**
-         * 檢查請假申請的時間範圍是否與指定的單日點名日期重疊。
-         * @param {Object} leave - 請假資料物件
-         * @param {string} dateKey - 點名日期 (YYYY-MM-DD)
-         * @returns {boolean} 是否重疊
+         * 檢查請假申請的時間範圍是否與指定的單日點名日期重疊
          */
         function checkLeaveOverlap(leave, dateKey) {
             if (!leave.startDateTime || !leave.endDateTime) return false;
 
-            // 將單日點名日期轉換為當天的起點和終點時間戳記
             const rollCallStart = new Date(dateKey + 'T00:00:00').getTime();
             const rollCallEnd = new Date(dateKey + 'T23:59:59').getTime();
-            
-            // 將請假日期時間轉換為時間戳記
             const leaveStart = new Date(leave.startDateTime).getTime();
             const leaveEnd = new Date(leave.endDateTime).getTime();
 
-            // 檢查兩個時間區間 [rollCallStart, rollCallEnd] 和 [leaveStart, leaveEnd] 是否有交集
-            // 只要 (請假開始 < 點名結束) 且 (請假結束 > 點名開始) 即為重疊
             return leaveStart < rollCallEnd && leaveEnd > rollCallStart;
         }
 
-        function initializeRollCallState(dateKey) {
-            if (!studentRoster.length) {
-                dailyRollCallState = {};
-                return;
-            }
-
-            // 1. 取得先前儲存的手動點名狀態 (Admin's last decision)
-            const todayAttendance = attendanceRecords.filter(r => r.dateKey === dateKey && r.type === 'DailyRollCall');
-            const savedState = {};
-            todayAttendance.forEach(record => {
-                // 僅記錄最新的點名狀態
-                if (!savedState[record.studentId] || record.timestamp.seconds > savedState[record.studentId].timestamp.seconds) {
-                    savedState[record.studentId] = record.status; 
-                }
-            });
-            
-            // 2. 取得當日重疊且已核准的請假狀態 (Initial state override)
-            const overlappingApprovedLeaves = leaveRequests.filter(r => 
-                r.status === 'Approved' && checkLeaveOverlap(r, dateKey)
-            );
-            
-            const leaveState = {};
-            overlappingApprovedLeaves.forEach(leave => {
-                // 如果學生在當日有任何已核准的請假，則將其標記為 'Leave'
-                leaveState[leave.studentId] = 'Leave'; 
-            });
-
-            // 3. 結合狀態並設定最終的 dailyRollCallState
-            dailyRollCallState = {};
-            studentRoster.forEach(student => {
-                const studentId = student.id;
-                
-                // Priority 1: 採用先前儲存的手動狀態
-                if (savedState[studentId]) {
-                     dailyRollCallState[studentId] = savedState[studentId];
-                } 
-                // Priority 2: 如果沒有手動狀態，檢查是否有已核准的請假，若有則設定為 'Leave'
-                else if (leaveState[studentId] === 'Leave') {
-                    dailyRollCallState[studentId] = 'Leave'; 
-                }
-                // Priority 3: 預設為 'Present'
-                else {
-                    dailyRollCallState[studentId] = 'Present'; 
-                }
-            });
-        }
-        
-        /**
-         * 點名狀態切換邏輯。
-         * Leave -> Present (管理員手動覆蓋請假，視為到校) -> Absent -> Late -> Present
-         */
         window.toggleStudentStatus = function(studentId) {
-            const currentStatus = dailyRollCallState[studentId] || 'Present';
-            let newStatus;
-            
-            if (currentStatus === 'Leave') {
-                newStatus = 'Present'; // 覆蓋：從請假改為到校
-            } else if (currentStatus === 'Present') {
-                newStatus = 'Absent';
-            } else if (currentStatus === 'Absent') {
-                newStatus = 'Late';
-            } else { // CurrentStatus === 'Late'
-                newStatus = 'Present';
-            }
-            
-            dailyRollCallState[studentId] = newStatus;
+            toggleStudentStatus(studentId);
             renderDailyRollCall();
         }
 
         window.saveDailyRollCall = function() {
-            if (appState !== 'admin' || !db) { showMessage('權限不足。', 'error'); return; }
+            if (appState !== 'admin') { showMessage('權限不足。', 'error'); return; }
+            const studentRoster = getStudentRoster();
             if (studentRoster.length === 0) { showMessage('請先匯入學生名單。', 'warning'); return; }
 
             const dateKey = currentAttendanceDate;
             if (!dateKey) { showMessage('請選擇點名日期。', 'warning'); return; }
             
-            const batch = [];
-            const now = Timestamp.now();
-
-            const attendanceCollection = collection(db, ATTENDANCE_PATH);
-
-            studentRoster.forEach(student => {
-                const status = dailyRollCallState[student.id];
-                if (status) {
-                    batch.push(addDoc(attendanceCollection, {
-                        studentId: student.id,
-                        userName: student.name,
-                        status: status,
-                        timestamp: now,
-                        dateKey: dateKey,
-                        type: 'DailyRollCall', // 管理者點名類型
-                        recordedBy: userId // 管理者操作記錄 Session ID
-                    }));
-                }
-            });
-            
-            Promise.all(batch)
-                .then(() => {
-                    showMessage(`已成功儲存 ${studentRoster.length} 筆 ${dateKey} 的點名紀錄！`, 'success');
-                })
-                .catch(error => {
-                    console.error("儲存點名記錄失敗:", error);
-                    showMessage('儲存點名記錄失敗，請查看控制台錯誤。', 'error');
-                });
+            saveDailyRollCall(dateKey, getDailyRollCallState(), studentRoster);
         }
 
-        // --- 學生介面功能 (submitLeave 保持不變) ---
+
+        // --- 學生請假功能 ---
         
-        /**
-         * 學生請假功能。
-         */
         window.submitLeave = function(event) {
             event.preventDefault();
             const startDateInput = document.getElementById('start-date').value;
@@ -873,63 +582,45 @@
             const endTimeInput = document.getElementById('end-time').value;
             const reasonInput = document.getElementById('leave-reason');
 
-            if (!selectedStudentId || !db) { showMessage('請先選擇您的姓名。', 'error'); return; }
+            if (!selectedStudentId) { showMessage('請先選擇您的姓名。', 'error'); return; }
             
             const reason = reasonInput.value.trim();
 
             if (!startDateInput || !startTimeInput || !endDateInput || !endTimeInput || !reason) { 
-                showMessage('請填寫完整的請假日期、時間範圍和原因。', 'warning'); 
+                showMessage('請填寫完整的請假資訊。', 'warning'); 
                 return; 
             }
 
-            // 組合完整的日期時間字串 (ISO 8601 格式，方便比較)
             const startDateTime = `${startDateInput}T${startTimeInput}`;
             const endDateTime = `${endDateInput}T${endTimeInput}`;
 
-            // NEW VALIDATION: 確保起始日期時間不晚於結束日期時間
             if (new Date(startDateTime).getTime() >= new Date(endDateTime).getTime()) {
-                showMessage('起始日期時間不能晚於或等於結束日期時間，請檢查您的輸入。', 'error');
+                showMessage('起始時間不能晚於結束時間。', 'error');
                 return;
             }
 
-            const leaveData = {
-                studentId: selectedStudentId, // 使用學生 ID
-                userName: selectedStudentName, // 使用學生名稱
-                startDateTime: startDateTime, // YYYY-MM-DDTHH:MM
-                endDateTime: endDateTime,   // YYYY-MM-DDTHH:MM
-                reason: reason,
-                status: 'Pending',
-                submittedAt: Timestamp.now(),
-                recordedBy: userId // 記錄 Session User ID
-            };
+            submitLeaveRequest({
+                studentId: selectedStudentId,
+                userName: selectedStudentName,
+                startDateTime,
+                endDateTime,
+                reason
+            });
 
-            addDoc(collection(db, LEAVE_REQUESTS_PATH), leaveData)
-                .then(() => {
-                    showMessage('請假申請提交成功！等待管理員審核。', 'success');
-                    // 清空輸入框
-                    document.getElementById('start-date').value = '';
-                    document.getElementById('start-time').value = '08:00';
-                    document.getElementById('end-date').value = '';
-                    document.getElementById('end-time').value = '17:00';
-                    reasonInput.value = '';
-                })
-                .catch((error) => { console.error("請假提交失敗: ", error); showMessage('請假提交失敗，請查看控制台錯誤。', 'error'); });
+            // 清空輸入框
+            document.getElementById('start-date').value = '';
+            document.getElementById('start-time').value = '08:00';
+            document.getElementById('end-date').value = '';
+            document.getElementById('end-time').value = '17:00';
+            reasonInput.value = '';
         }
 
         window.updateLeaveStatus = function(docId, newStatus) {
-            if (appState !== 'admin' || !userId || !db) { showMessage('權限不足，只有管理者才能操作。', 'error'); return; }
-            
-            const docRef = doc(db, LEAVE_REQUESTS_PATH, docId);
-            updateDoc(docRef, { status: newStatus })
-            .then(() => {
-                const statusText = newStatus === 'Approved' ? '已批准' : '已拒絕';
-                showMessage(`請假申請 ${docId.substring(0, 6)} 已更新為 ${statusText}。`, 'success');
-            })
-            .catch((error) => { console.error("更新請假狀態失敗: ", error); showMessage('更新狀態失敗，請查看控制台錯誤。', 'error'); });
+            updateLeaveStatus(docId, newStatus);
         }
         
         /**
-         * 將 YYYY-MM-DDTHH:MM 格式轉換為 YYYY/MM/DD HH:MM
+         * 格式化日期時間
          */
         function formatDateTime(dateTimeStr) {
             if (!dateTimeStr) return 'N/A';
@@ -941,43 +632,47 @@
         }
 
 
-        // --- Firestore 監聽器 (保持不變) ---
+        // --- 歷史請假查詢與匯出功能 ---
 
-        function startFirestoreListeners() {
-            if (!db) return;
+        window.searchLeaveHistory = function() {
+            const startDateInput = document.getElementById('start-date-input').value;
+            const endDateInput = document.getElementById('end-date-input').value;
+
+            if (!startDateInput || !endDateInput) {
+                showMessage('請選擇起始日期和結束日期。', 'warning');
+                return;
+            }
+
+            const startDate = new Date(startDateInput + 'T00:00:00').getTime();
+            const endDate = new Date(endDateInput + 'T23:59:59').getTime(); 
             
-            loadRoster(); 
+            if (isNaN(startDate) || isNaN(endDate) || startDate > endDate) {
+                showMessage('日期範圍無效。', 'error');
+                return;
+            }
 
-            onSnapshot(collection(db, ATTENDANCE_PATH), (snapshot) => {
-                attendanceRecords = snapshot.docs.map(doc => ({ 
-                    id: doc.id, 
-                    ...doc.data(),
-                    timestamp: doc.data().timestamp instanceof Timestamp ? doc.data().timestamp : new Timestamp(doc.data().timestamp.seconds, doc.data().timestamp.nanoseconds)
-                }));
-                attendanceRecords.sort((a, b) => b.timestamp.seconds - a.timestamp.seconds);
-                if (currentAttendanceDate) {
-                    initializeRollCallState(currentAttendanceDate);
-                }
-                renderUI();
-            }, (error) => {
-                console.error("Error listening to attendance:", error);
-            });
-
-            onSnapshot(collection(db, LEAVE_REQUESTS_PATH), (snapshot) => {
-                leaveRequests = snapshot.docs.map(doc => ({ 
-                    id: doc.id, 
-                    ...doc.data(),
-                    submittedAt: doc.data().submittedAt instanceof Timestamp ? doc.data().submittedAt : new Timestamp(doc.data().submittedAt.seconds, doc.data().submittedAt.nanoseconds)
-                }));
-                leaveRequests.sort((a, b) => b.submittedAt.seconds - a.submittedAt.seconds);
-                if (currentAttendanceDate) {
-                    initializeRollCallState(currentAttendanceDate);
-                }
-                renderUI();
-            }, (error) => {
-                console.error("Error listening to leave requests:", error);
-            });
+            queryResults = searchLeaveHistory(startDate, endDate);
+            renderAdminRecords();
+            showMessage(`查詢完成，找到 ${queryResults.length} 筆紀錄。`, 'success');
         }
+        
+        window.exportLeaveHistory = function() {
+            if (queryResults.length === 0) {
+                showMessage('沒有查詢結果可以匯出。', 'warning');
+                return;
+            }
+
+            exportLeaveHistory(queryResults);
+        }
+        
+        window.clearQueryResults = function() {
+            queryResults = [];
+            document.getElementById('start-date-input').value = '';
+            document.getElementById('end-date-input').value = '';
+            renderAdminRecords();
+            showMessage('查詢結果已清除。', 'info');
+        }
+
 
         // --- UI 渲染與控制功能 ---
 
@@ -1008,10 +703,14 @@
             adminContent.classList.add('hidden');
             backButton.classList.add('hidden');
 
-            // 根據選中的學生身份啟用/禁用學生介面按鈕
+            // 啟用/禁用學生介面按鈕
             const isStudentSelected = selectedStudentId !== null;
-            document.getElementById('submit-leave-btn').disabled = !isStudentSelected; // 只需要檢查請假按鈕
+            document.getElementById('submit-leave-btn').disabled = !isStudentSelected;
 
+            // 更新用戶ID顯示
+            document.getElementById('user-id-display').textContent = getUserId() 
+                ? `會話 ID: ${getUserId().substring(0, 8)}...` 
+                : '未登入';
 
             if (appState === 'entry') {
                 entryContent.classList.remove('hidden');
@@ -1030,8 +729,7 @@
         }
 
         /**
-         * 渲染學生自己的請假紀錄 (點名紀錄已移除)。
-         * 依賴於 selectedStudentId。
+         * 渲染學生自己的請假紀錄
          */
         function renderStudentRecords() {
             if (!selectedStudentId) {
@@ -1039,6 +737,7 @@
                  return;
             }
             
+            const leaveRequests = getLeaveRequests();
             const myLeaves = leaveRequests.filter(r => r.studentId === selectedStudentId);
             
             const leaveList = document.getElementById('my-leave-list');
@@ -1047,7 +746,6 @@
                 : myLeaves.map(r => `
                     <li class="p-2 border-b border-gray-100 text-sm">
                         <div class="flex justify-between items-start">
-                            <!-- 顯示日期時間範圍 -->
                             <div class="font-medium text-gray-700">
                                 ${formatDateTime(r.startDateTime)} ~ ${formatDateTime(r.endDateTime)}
                                 <span class="text-gray-500 ml-2"> - ${r.reason}</span>
@@ -1061,22 +759,21 @@
         }
 
         /**
-         * 渲染管理員視圖。
+         * 渲染管理員視圖
          */
         function renderAdminRecords() {
+            const studentRoster = getStudentRoster();
+            const rosterHeaders = getRosterHeaders();
+            const className = getClassName();
+            const leaveRequests = getLeaveRequests();
             
             // ① 學生清單管理
             document.getElementById('roster-count').textContent = `(共 ${studentRoster.length} 人)`;
             const rosterListContainer = document.getElementById('roster-list-grid'); 
             
             if (studentRoster.length === 0) {
-                rosterListContainer.classList.add('grid', 'grid-cols-1', 'sm:grid-cols-2', 'md:grid-cols-3', 'gap-3', 'p-3');
-                rosterListContainer.classList.remove('p-0');
                 rosterListContainer.innerHTML = '<p class="text-gray-500 col-span-full">目前沒有載入的班級名單。</p>';
             } else {
-                rosterListContainer.classList.add('grid', 'grid-cols-1', 'sm:grid-cols-2', 'md:grid-cols-3', 'gap-3', 'p-3');
-                rosterListContainer.classList.remove('p-0');
-                
                 rosterListContainer.innerHTML = studentRoster.map(s => `
                     <div class="roster-item">
                         <span class="font-bold text-indigo-600">${s.number}號:</span>
@@ -1085,11 +782,13 @@
                 `).join('');
             }
             
+            document.getElementById('class-name-input').value = className || "預設班級";
+            
             // ② 每日點名
             renderDailyRollCall();
 
 
-            // ③ 請假單審核 (待審核列表)
+            // ③ 請假單審核
             const pendingRequests = leaveRequests.filter(r => r.status === 'Pending');
             const pendingList = document.getElementById('admin-pending-list');
             
@@ -1102,7 +801,6 @@
                     return `
                     <li class="p-4 border border-gray-200 bg-white rounded-lg shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center">
                         <div class="mb-2 md:mb-0 flex-grow">
-                            <!-- 顯示日期時間範圍 -->
                             <p class="font-semibold text-gray-800">
                                 <span class="text-blue-600">${r.userName} (${r.studentId})</span> 
                                 <span class="text-sm font-normal text-gray-600">(請假: ${formatDateTime(r.startDateTime)} ~ ${formatDateTime(r.endDateTime)})</span>
@@ -1135,7 +833,6 @@
                     ${queryResults.map(r => `
                         <li class="p-2 border-b border-gray-100 text-sm">
                             <div class="flex justify-between items-start">
-                                <!-- 顯示日期時間範圍 -->
                                 <div class="font-medium text-gray-700">
                                     ${formatDateTime(r.startDateTime)} ~ ${formatDateTime(r.endDateTime)}
                                     <span class="text-gray-500 ml-2"> - ${r.userName} (${r.studentId})</span>
@@ -1159,11 +856,13 @@
         }
         
         /**
-         * 渲染每日點名網格，使用新的樣式。
+         * 渲染每日點名網格
          */
         function renderDailyRollCall() {
             const rollCallGrid = document.getElementById('roll-call-grid');
             const saveRollCallBtn = document.getElementById('save-roll-call-btn');
+            const studentRoster = getStudentRoster();
+            const dailyRollCallState = getDailyRollCallState();
 
             if (studentRoster.length === 0) {
                 rollCallGrid.innerHTML = '<p class="text-gray-500 col-span-full text-center">請先匯入班級名單。</p>';
@@ -1172,236 +871,38 @@
             }
             
             saveRollCallBtn.disabled = false;
-            document.querySelector('#admin-view-content .section-header .text-xl span').textContent = `(${className})`;
 
             rollCallGrid.innerHTML = studentRoster.map(student => {
                 const status = dailyRollCallState[student.id] || 'Present';
-                // 根據狀態設定顯示文字和 CSS 類別
                 const statusText = status === 'Present' ? '到' : 
                                    status === 'Absent' ? '缺' : 
                                    status === 'Late' ? '遲' : '請假'; 
-                // Class for the Number Block (Green/Red/etc.)
                 const statusClass = status === 'Leave' ? 'Leave' : status; 
-                // Class for the Status Text (always a dark color)
-                const statusTextClass = 'rollcall-status-text';
-
 
                 return `
-                    <!-- 點擊整個區塊來切換狀態，以符合圖片中點名方塊的樣式 -->
                     <div class="flex flex-col items-center justify-center p-1 cursor-pointer" onclick="toggleStudentStatus('${student.id}')">
-                        <!-- 狀態文字 (到/缺/遲/請假) -->
-                        <span class="text-sm font-semibold mb-1 ${statusTextClass}">${statusText}</span>
-                        <!-- 學生號碼方塊 (顏色根據狀態變化) -->
+                        <span class="text-sm font-semibold mb-1 rollcall-status-text">${statusText}</span>
                         <div class="rollcall-number-block ${statusClass}">
                             ${student.number}
                         </div>
-                        <!-- 學生姓名縮寫/ID -->
                         <span class="text-xs font-medium text-gray-600 mt-1 truncate">(${student.name.substring(0, 5)})</span>
                     </div>
                 `;
             }).join('');
         }
-        
-        // --- ④ 歷史請假查詢與匯出功能 (保持不變) ---
-
-        window.searchLeaveHistory = function() {
-            const startDateInput = document.getElementById('start-date-input').value;
-            const endDateInput = document.getElementById('end-date-input').value;
-
-            if (!startDateInput || !endDateInput) {
-                showMessage('請選擇起始日期和結束日期。', 'warning');
-                return;
-            }
-
-            const startDate = new Date(startDateInput + 'T00:00:00').getTime();
-            const endDate = new Date(endDateInput + 'T23:59:59').getTime(); 
-            
-            if (isNaN(startDate) || isNaN(endDate) || startDate > endDate) {
-                showMessage('日期範圍無效，請檢查您的輸入。', 'error');
-                return;
-            }
-
-            queryResults = leaveRequests.filter(request => {
-                // 由於 Firestore 儲存的是 YYYY-MM-DDTHH:MM，我們只需要提取日期部分進行比較
-                const requestDateStr = request.startDateTime ? request.startDateTime.split('T')[0] : null;
-                if (!requestDateStr) return false;
-                
-                // 將請假起始日期轉換為當天 00:00:00 的時間戳記
-                const requestStartTime = new Date(requestDateStr + 'T00:00:00').getTime();
-
-                // 檢查請假起始日期是否在管理員查詢的日期範圍內
-                // 這裡假設管理員查詢是基於 "請假開始日" 落在查詢區間內
-                return requestStartTime >= startDate && requestStartTime <= endDate;
-            });
-            
-            // 根據請假起始日期時間排序
-            queryResults.sort((a, b) => new Date(b.startDateTime).getTime() - new Date(a.startDateTime).getTime()); 
-
-            renderAdminRecords();
-            showMessage(`查詢完成，找到 ${queryResults.length} 筆紀錄。`, 'success');
-        }
-        
-        window.exportLeaveHistory = function() {
-            if (queryResults.length === 0) {
-                showMessage('沒有查詢結果可以匯出。', 'warning');
-                return;
-            }
-
-            let csvContent = "data:text/csv;charset=utf-8,\uFEFF"; 
-
-            // 標題行
-            csvContent += "請假起始日期時間,請假結束日期時間,學生名稱,學號,狀態,請假原因,提交時間\n";
-
-            // 數據行
-            queryResults.forEach(item => {
-                const submittedTimeString = item.submittedAt && typeof item.submittedAt.toDate === 'function'
-                    ? new Date(item.submittedAt.toDate()).toLocaleString('zh-TW')
-                    : 'N/A';
-                
-                const statusText = item.status === 'Approved' ? '已批准' : item.status === 'Rejected' ? '已拒絕' : '待審核';
-                
-                const row = [
-                    formatDateTime(item.startDateTime), // Full date-time
-                    formatDateTime(item.endDateTime),   // Full date-time
-                    item.userName,
-                    item.studentId || 'N/A', 
-                    statusText,
-                    `"${item.reason.replace(/"/g, '""').replace(/\n/g, ' ')}"`, 
-                    submittedTimeString
-                ];
-                csvContent += row.join(',') + "\n";
-            });
-
-            const encodedUri = encodeURI(csvContent);
-            const link = document.createElement("a");
-            link.setAttribute("href", encodedUri);
-            link.setAttribute("download", `leave_records_${new Date().toISOString().split('T')[0]}.csv`);
-            document.body.appendChild(link); 
-            link.click();
-            document.body.removeChild(link); 
-            
-            showMessage(`已成功匯出 ${queryResults.length} 筆請假記錄。`, 'success');
-        }
-        
-        window.clearQueryResults = function() {
-            queryResults = [];
-            document.getElementById('start-date-input').value = '';
-            document.getElementById('end-date-input').value = '';
-            renderAdminRecords();
-            showMessage('查詢結果已清除。', 'info');
-        }
 
 
-        // --- Firebase 配置表單處理函數 ---
-        
-        /**
-         * 從表單獲取 Firebase 配置
-         */
-        function getConfigFromForm() {
-            return {
-                apiKey: document.getElementById('firebase-api-key').value.trim(),
-                authDomain: document.getElementById('firebase-auth-domain').value.trim(),
-                projectId: document.getElementById('firebase-project-id').value.trim(),
-                storageBucket: document.getElementById('firebase-storage-bucket').value.trim(),
-                messagingSenderId: document.getElementById('firebase-messaging-sender-id').value.trim(),
-                appId: document.getElementById('firebase-app-id').value.trim()
-            };
-        }
-        
-        /**
-         * 將 Firebase 配置填入表單
-         */
-        function fillConfigForm(config) {
-            document.getElementById('firebase-api-key').value = config.apiKey || '';
-            document.getElementById('firebase-auth-domain').value = config.authDomain || '';
-            document.getElementById('firebase-project-id').value = config.projectId || '';
-            document.getElementById('firebase-storage-bucket').value = config.storageBucket || '';
-            document.getElementById('firebase-messaging-sender-id').value = config.messagingSenderId || '';
-            document.getElementById('firebase-app-id').value = config.appId || '';
-        }
-        
-        /**
-         * 儲存自訂 Firebase 配置
-         */
-        window.saveFirebaseConfig = function() {
-            const config = getConfigFromForm();
-            
-            // 驗證必要欄位
-            if (!config.apiKey || !config.projectId || !config.appId) {
-                showMessage('請至少填寫 API Key、Project ID 和 App ID', 'error');
-                return;
-            }
-            
-            try {
-                // 儲存到 localStorage
-                saveFirebaseConfigToLocal(config);
-                
-                // 重新初始化 Firebase
-                initFirebase(config)
-                    .then(() => {
-                        showMessage('Firebase 配置已更新並生效！', 'success');
-                    })
-                    .catch(error => {
-                        console.error('重新初始化 Firebase 失敗:', error);
-                        showMessage('配置無效，請檢查您的輸入。', 'error');
-                    });
-            } catch (error) {
-                console.error('儲存 Firebase 配置失敗:', error);
-                showMessage('儲存配置失敗，請重試。', 'error');
-            }
-        }
-        
-        /**
-         * 使用預設 Firebase 配置
-         */
-        window.useDefaultFirebaseConfig = function() {
-            try {
-                // 填入預設配置到表單
-                fillConfigForm(defaultFirebaseConfig);
-                
-                // 儲存到 localStorage
-                saveFirebaseConfigToLocal(defaultFirebaseConfig);
-                
-                // 重新初始化 Firebase
-                initFirebase(defaultFirebaseConfig)
-                    .then(() => {
-                        showMessage('已切換到預設 Firebase 配置！', 'success');
-                    })
-                    .catch(error => {
-                        console.error('重新初始化 Firebase 失敗:', error);
-                        showMessage('切換配置失敗，請重試。', 'error');
-                    });
-            } catch (error) {
-                console.error('使用預設配置失敗:', error);
-                showMessage('使用預設配置失敗，請重試。', 'error');
-            }
-        }
-        
         // 程式啟動點
         window.onload = function() {
-            if (typeof initializeApp === 'undefined') {
-                console.error("Firebase SDK 載入失敗。");
-                showMessage('系統核心載入失敗，請檢查網路連接。', 'error');
-                return;
-            }
-            
-            // 載入儲存的配置並填入表單
-            const savedConfig = loadFirebaseConfig();
-            fillConfigForm(savedConfig);
-            
-            // 初始化 Firebase
-            initFirebase(savedConfig)
-                .then(() => {
-                    // 自動應用最新配置
-                    showMessage('Firebase 配置已自動應用！', 'success');
-                })
-                .catch(error => {
-                    console.error('初始化 Firebase 失敗:', error);
-                    showMessage('Firebase 初始化失敗，請檢查您的配置。', 'error');
-                });
-            
-            // 初始狀態為入口畫面
-            setAppState('entry');
+            initFirebase().then(() => {
+                // 初始化成功後設置初始狀態
+                setAppState('entry');
+                // 設置學生選擇器
+                renderStudentIdentitySelector();
+            }).catch(error => {
+                console.error("初始化失敗:", error);
+                showMessage('系統初始化失敗，請檢查網路連接。', 'error');
+            });
         }
     </script>
 </body>
