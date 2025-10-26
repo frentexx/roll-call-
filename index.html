@@ -1,1332 +1,1248 @@
 <!DOCTYPE html>
-<html lang="zh-Hant">
+<html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>學生點名與請假系統</title>
+    <title>線上請假及點名系統</title>
+    <!-- 載入 Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- 引入 Vue 3 函式庫 -->
-    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
-    <!-- 引入 SheetJS 函式庫以支援 XLSX 檔案讀取與匯出 -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
+    <!-- 載入 Font Awesome Icons (用於圖示) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- 設定字體為 Inter -->
     <style>
+        @import url('https://fonts.fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
         body {
-            font-family: 'Inter', 'Noto Sans TC', sans-serif;
+            font-family: 'Inter', sans-serif;
+            background-color: #f4f7f9;
         }
-        [v-cloak] { display: none; }
-        .form-select {
-            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3csvg%3e");
-            background-position: right 0.5rem center;
-            background-repeat: no-repeat;
-            background-size: 1.5em 1.5em;
-            padding-right: 2.5rem;
+        .container-card {
+            max-width: 95%;
+            margin: 2rem auto;
+            padding: 1.5rem;
+            background-color: white;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.15);
+        }
+        .section-card {
+            background-color: #ffffff;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            margin-bottom: 2rem;
+            border: 1px solid #e5e7eb;
+        }
+        .section-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #3b82f6;
+        }
+        .section-icon {
+            font-size: 1.5rem;
+            margin-right: 0.5rem;
+            color: #3b82f6;
         }
         
-        /* 點名按鈕狀態 */
-        .student-btn.present { background-color: #10B981; color: white; } /* Green */
-        .student-btn.absent { background-color: #EF4444; color: white; } /* Red */
-        .student-btn.late { background-color: #F59E0B; color: white; } /* Amber */
-        .student-btn.leave { 
-            background-color: #6366F1; /* Indigo */
-            color: white; 
-            text-decoration: line-through;
-            opacity: 0.8;
-        }
-        .student-card {
-            display: flex; flex-direction: column; align-items: center; text-align: center;
+        /* --- 點名區塊專用樣式 --- */
+        /* Updated styles for the Roll Call Number Block (The large colored square) */
+        .rollcall-number-block {
+            @apply w-full aspect-square flex items-center justify-center text-white font-extrabold text-3xl rounded-xl shadow-lg transition-all duration-200;
         }
 
-        /* Modal styles */
-        .modal-overlay {
-            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-            background-color: rgba(0, 0, 0, 0.5);
-            display: flex; justify-content: center; align-items: center;
-            z-index: 1000;
+        /* Status colors for the Number Block, matching the vibrant green in the image */
+        .rollcall-number-block.Present {
+            background-color: #10B981; /* Vibrant Green */
         }
-        .modal-content {
-            background-color: white; padding: 2rem; border-radius: 1rem;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-            width: 90%; max-width: 500px;
+        .rollcall-number-block.Absent {
+            background-color: #EF4444; /* Red */
+        }
+        .rollcall-number-block.Late {
+            background-color: #F59E0B; /* Amber/Orange */
+        }
+        .rollcall-number-block.Leave {
+            background-color: #3B82F6; /* Blue for Leave */
+        }
+        
+        /* Status text color above the block */
+        .rollcall-status-text {
+             color: #1f2937; /* Gray-800 for visibility */
+             /* Add a slight drop shadow for emphasis */
+             text-shadow: 0 1px 1px rgba(0,0,0,0.1);
+        }
+
+        /* --- 點名區塊專用樣式 End --- */
+
+        .roster-item {
+             border: 1px solid #d1d5db;
+             padding: 0.5rem 0.75rem;
+             border-radius: 8px;
+             background-color: #f9fafb;
+             display: flex;
+             justify-content: space-between;
+             align-items: center;
+             font-size: 0.875rem;
+             font-weight: 500;
         }
     </style>
 </head>
-<body class="bg-slate-100 text-slate-800">
+<body>
 
-    <div id="app" v-cloak class="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
-        
-        <!-- 系統標頭 -->
-        <header class="mb-8">
-            <h1 class="text-4xl font-bold text-slate-900">學生點名與請假系統</h1>
-            <p v-if="isAuthReady && userId" class="text-sm text-slate-500 mt-2">
-                您的使用者 ID: <code class="bg-slate-200 px-2 py-1 rounded">{{ userId }}</code>
-                <span v-if="view === 'teacher'">(請將此 ID 分享給您的學生)</span>
-            </p>
-            <p v-else class="text-lg text-slate-600 mt-2">正在連線至系統...</p>
+    <div class="container-card">
+        <!-- 標題與控制項 -->
+        <header class="mb-6 pb-4 border-b border-gray-200 flex justify-between items-center flex-wrap">
+            <h1 class="text-3xl font-extrabold text-blue-800 tracking-tight">
+                線上請假及點名系統
+            </h1>
+            <div class="flex items-center space-x-3 mt-2 sm:mt-0">
+                <span id="user-id-display" class="text-sm font-medium text-gray-500">載入中...</span>
+                <button id="back-to-entry-button" onclick="setAppState('entry')"
+                        class="px-4 py-2 bg-red-500 text-white text-sm font-semibold rounded-lg shadow-md hover:bg-red-600 transition duration-150 ease-in-out hidden">
+                    登出/回主畫面
+                </button>
+            </div>
         </header>
 
-        <!-- 視圖切換 -->
-        <div v-if="isAuthReady" class="mb-6 bg-white p-3 rounded-xl shadow-sm flex gap-2">
-            <button @click="view = 'teacher'" :class="view === 'teacher' ? 'bg-indigo-600 text-white' : 'bg-slate-100 hover:bg-slate-200'" class="flex-1 px-4 py-2 rounded-lg font-semibold transition-colors">
-                教師操作介面
-            </button>
-            <button @click="view = 'student'" :class="view === 'student' ? 'bg-indigo-600 text-white' : 'bg-slate-100 hover:bg-slate-200'" class="flex-1 px-4 py-2 rounded-lg font-semibold transition-colors">
-                學生請假介面
-            </button>
-        </div>
+        <!-- 訊息框 -->
+        <div id="message-box" class="mb-4 hidden"></div>
 
-        <!-- 主要內容區域 -->
-        <main v-if="isAuthReady">
-
-            <!-- ======================= -->
-            <!--    教師操作介面 (Teacher)   -->
-            <!-- ======================= -->
-            <div v-if="view === 'teacher'" class="space-y-8">
+        <!-- 1. 角色選擇介面 (Entry View) -->
+        <div id="entry-view-content" class="text-center p-8">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">請選擇您的角色</h2>
+            <div class="flex flex-col sm:flex-row gap-6 justify-center">
                 
-                <!-- 1. 班級管理 -->
-                <section class="bg-white p-6 rounded-2xl shadow-lg">
-                    <h2 class="text-2xl font-semibold mb-4 text-indigo-700">❖ 班級名單與設定</h2>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                            <label for="class-select" class="block text-sm font-medium text-slate-700">目前班級</label>
-                            <select id="class-select" v-model="currentClassId" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md appearance-none form-select">
-                                <option v-if="!classes.length" disabled value="">請先新增班級</option>
-                                <option v-for="c in classes" :key="c.id" :value="c.id">{{ c.name }}</option>
-                            </select>
-                        </div>
-                        <div class="flex items-end gap-2">
-                            <div class="flex-grow">
-                                <label for="new-class-name" class="block text-sm font-medium text-slate-700">新增班級</label>
-                                <input type="text" id="new-class-name" v-model.trim="newClassName" @keyup.enter="addClass" placeholder="例如：三年一班" class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
-                            </div>
-                            <button @click="addClass" class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 font-semibold whitespace-nowrap h-10">新增</button>
-                        </div>
-                    </div>
+                <button onclick="enterStudentView()"
+                        class="role-button w-full sm:w-1/3 py-5 bg-blue-500 text-white text-xl font-bold rounded-xl shadow-lg hover:bg-blue-600">
+                    學生
+                </button>
+                
+                <button onclick="showAdminPasswordPrompt()"
+                        class="role-button w-full sm:w-1/3 py-5 bg-indigo-600 text-white text-xl font-bold rounded-xl shadow-lg hover:bg-indigo-700">
+                    管理者
+                </button>
+            </div>
+        </div>
+
+        <!-- 2. 管理者密碼輸入框 (Admin Password Prompt) -->
+        <div id="admin-password-prompt" class="hidden p-8 bg-gray-50 rounded-lg shadow-inner max-w-md mx-auto">
+             <h2 class="text-xl font-bold text-indigo-800 mb-4">管理者登入</h2>
+             <input type="password" id="admin-password-input" placeholder="請輸入密碼"
+                    class="w-full p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 mb-4">
+             <button onclick="checkAdminPassword()"
+                     class="w-full py-2 bg-indigo-500 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-600 transition duration-150">
+                 確認登入
+             </button>
+        </div>
+        
+        <!-- 3. 學生視圖內容 (已移除點名功能，請假改為日期時間區間) -->
+        <div id="student-view-content" class="hidden">
+            
+            <!-- 學生身份選擇 -->
+            <div class="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <label for="student-select" class="block text-sm font-medium text-gray-700 mb-2">請選擇您的姓名以進行操作:</label>
+                <select id="student-select" onchange="updateStudentIdentity()"
+                        class="w-full p-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                    <option value="" disabled selected>-- 請先載入名單 (或班級尚未設定名單) --</option>
+                    <!-- 學生名單將在此處載入 -->
+                </select>
+                <p id="selected-student-info" class="text-sm text-gray-500 mt-2">尚未選擇身份，無法操作請假。</p>
+            </div>
+
+            <!-- 請假申請區塊 (日期時間範圍) -->
+            <section class="mb-8 p-6 bg-blue-50 border-l-4 border-blue-500 rounded-lg shadow-lg">
+                <h2 class="text-2xl font-bold text-blue-700 mb-4">請假申請 (日期時間範圍)</h2>
+                <form id="leave-request-form" onsubmit="submitLeave(event)" class="space-y-4">
                     
-                    <div v-if="currentClass" class="mt-6 pt-4 border-t border-slate-200 space-y-6">
-                        <div class="flex justify-between items-center">
-                            <h3 class="text-lg font-medium">學生清單管理 (共 {{ allStudents.length }} 人)</h3>
-                            <button @click="renameClass" class="bg-yellow-500 text-white px-3 py-1 rounded-lg hover:bg-yellow-600 font-semibold text-sm">重新命名班級</button>
+                    <!-- 起始日期與時間 -->
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label for="start-date" class="block text-sm font-medium text-gray-700">請假起始日期:</label>
+                            <input type="date" id="start-date" required
+                                   class="mt-1 block w-full p-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
                         </div>
-
-                        <!-- 學生名單 CSV/XLSX 匯入區塊 -->
-                        <div class="border-2 border-dashed border-green-300 rounded-lg p-4 bg-green-50">
-                            <label for="csvFileInput" class="block text-sm font-medium text-green-700 mb-2 cursor-pointer">
-                                透過 CSV 或 XLSX 匯入學生名單
-                            </label>
-                            <!-- 允許 CSV 和 XLSX 檔案 -->
-                            <input type="file" id="csvFileInput" accept=".csv, .xlsx" class="hidden" @change="handleFileUpload">
-                            
-                            <div class="flex gap-2 items-center">
-                                <button @click="triggerFileUpload" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-3 rounded-lg shadow-md transition duration-150">
-                                    選擇並匯入檔案 (.csv 或 .xlsx)
-                                </button>
-                                <button @click="requestDeleteClass" class="bg-red-600 text-white px-3 py-2 rounded-lg hover:bg-red-700 font-semibold">刪除班級</button>
-                            </div>
-                            <p v-if="csvUploadStatus" class="text-xs mt-2 text-slate-600">{{ csvUploadStatus }}</p>
-                            <p v-if="csvError" class="text-xs mt-2 text-red-600 font-semibold">錯誤: {{ csvError }}</p>
-                        </div>
-                        
-                        <!-- 顯示當前名單 (依照編號由小到大列出) -->
-                        <div v-if="currentClass.students && currentClass.students.length > 0">
-                            <h4 class="font-semibold text-sm text-slate-700 mb-2">當前學生名單預覽：</h4>
-                            <div class="max-h-40 overflow-y-auto border rounded-lg p-3 bg-slate-50 grid grid-cols-2 sm:grid-cols-3 gap-2 text-sm">
-                                <!-- allStudents 已經是按序號排列的 -->
-                                <span v-for="(student, index) in allStudents" :key="index" class="bg-white px-3 py-1 rounded-full border text-center">
-                                    {{ student.seat }} 號: {{ student.name }}
-                                </span>
-                            </div>
-                            <p class="text-xs text-slate-500 mt-2">* 點名時將使用此名單的序號作為座號。</p>
-                        </div>
-                        <div v-else>
-                            <p class="text-center text-slate-500 py-4 border rounded-lg">此班級尚未匯入學生名單。</p>
+                        <div>
+                            <label for="start-time" class="block text-sm font-medium text-gray-700">請假起始時間:</label>
+                            <input type="time" id="start-time" required value="08:00"
+                                   class="mt-1 block w-full p-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
                         </div>
                     </div>
-                </section>
 
-                <div v-if="!currentClass" class="text-center py-12 bg-white rounded-2xl shadow-lg">
-                    <h2 class="text-2xl font-semibold text-slate-700">請先新增或選擇一個班級</h2>
+                    <!-- 結束日期與時間 -->
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label for="end-date" class="block text-sm font-medium text-gray-700">請假結束日期:</label>
+                            <input type="date" id="end-date" required
+                                   class="mt-1 block w-full p-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label for="end-time" class="block text-sm font-medium text-gray-700">請假結束時間:</label>
+                            <input type="time" id="end-time" required value="17:00"
+                                   class="mt-1 block w-full p-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="leave-reason" class="block text-sm font-medium text-gray-700">請假原因:</label>
+                        <textarea id="leave-reason" rows="3" required placeholder="例如: 病假、事假"
+                                  class="mt-1 block w-full p-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"></textarea>
+                    </div>
+                    <button type="submit" id="submit-leave-btn" disabled
+                            class="w-full py-2 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 transition duration-150 disabled:opacity-50">
+                        提交申請
+                    </button>
+                </form>
+            </section>
+
+            <!-- 我的請假申請 (點名紀錄已移除) -->
+            <section class="p-6 bg-white rounded-lg shadow-lg border border-gray-200">
+                <h3 class="text-xl font-semibold text-gray-800 mb-3 border-b pb-2">我的請假申請</h3>
+                <ul id="my-leave-list" class="divide-y divide-gray-100">
+                    <!-- 請假記錄將在此處載入 -->
+                </ul>
+            </section>
+        </div>
+
+        <!-- 4. 管理員視圖內容 (重構) -->
+        <div id="admin-view-content" class="hidden">
+             <h2 class="text-3xl font-bold text-indigo-700 mb-6">教師操作介面</h2>
+
+            <!-- ① 學生清單管理 -->
+            <div class="section-card">
+                <div class="section-header">
+                    <i class="fas fa-list-ul section-icon"></i>
+                    <h2 class="text-xl font-bold text-gray-800">學生清單管理 
+                        <span id="roster-count" class="text-lg font-normal text-gray-500">(共 0 人)</span>
+                    </h2>
+                </div>
+                
+                <!-- 班級名稱與操作按鈕 -->
+                <div class="flex justify-between items-center flex-wrap gap-2 mb-4">
+                    <input type="text" id="class-name-input" value="預設班級" placeholder="班級名稱"
+                           class="flex-grow min-w-[150px] p-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                    <button onclick="saveClassName()"
+                            class="px-3 py-2 bg-yellow-500 text-white text-sm font-semibold rounded-lg shadow-md hover:bg-yellow-600 transition duration-150">
+                        <i class="fas fa-pen mr-1"></i> 重新命名班級
+                    </button>
+                    <button onclick="deleteRoster()"
+                            class="px-3 py-2 bg-red-600 text-white text-sm font-semibold rounded-lg shadow-md hover:bg-red-700 transition duration-150">
+                        <i class="fas fa-trash-alt mr-1"></i> 刪除班級
+                    </button>
                 </div>
 
-                <template v-if="currentClass">
-                    <!-- 2. 點名區域 -->
-                    <section class="bg-white p-6 rounded-2xl shadow-lg">
-                        <h2 class="text-2xl font-semibold mb-4 text-indigo-700">② 每日點名</h2>
-                        <div>
-                            <label for="attendance-date" class="block text-sm font-medium text-slate-700">選擇點名日期</label>
-                            <input type="date" id="attendance-date" v-model="selectedDate" class="mt-1 w-full md:w-1/2 px-3 py-2 border border-slate-300 rounded-lg">
-                        </div>
-                        
-                        <div v-if="allStudents.length > 0" class="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-7 lg:grid-cols-9 gap-4 mt-6">
-                            <div v-for="student in allStudents" :key="student.seat" class="student-card">
-                                <button @click="cycleAttendanceStatus(student.seat)"
-                                        :class="getStudentStatusClass(student.seat)"
-                                        class="student-btn w-12 h-12 rounded-lg font-mono text-lg text-center transition-all duration-150 ease-in-out shadow-md hover:shadow-lg disabled:opacity-50"
-                                        :disabled="isStudentOnLeave(student.seat)">
-                                    {{ student.seat }}
-                                </button>
-                                <span class="text-xs mt-1 font-medium truncate w-full px-1" :class="getStudentStatusTextColor(student.seat)" :title="student.name">
-                                    {{ getStudentStatusText(student.seat) }}<br/>
-                                    ({{ student.name }})
-                                </span>
-                            </div>
-                        </div>
-                        <div v-else class="text-center text-slate-500 py-6">
-                            請先匯入學生的班級名單。
-                        </div>
-
-                         <button @click="saveAttendance" :disabled="allStudents.length === 0" class="w-full mt-6 bg-green-600 text-white px-4 py-3 rounded-lg hover:bg-green-700 font-bold text-lg disabled:bg-green-400">
-                            儲存今日點名紀錄
+                <!-- 檔案上傳 -->
+                <div class="p-4 bg-green-50 border-l-4 border-green-500 rounded-lg mb-4">
+                    <!-- 提示訊息已修改，說明編碼問題 -->
+                    <p class="text-sm text-green-700 mb-3">請透過 CSV 匯入學生名單 (請確保 CSV 檔案包含標題列，**系統預設使用 Big5 編碼讀取**，以確保中文字元正確顯示。)</p>
+                    <div class="flex flex-col sm:flex-row gap-3 items-center">
+                        <input type="file" id="roster-file-input" accept=".csv" class="w-full sm:flex-grow p-2 border border-green-300 rounded-lg bg-white">
+                        <button onclick="uploadRosterFile()"
+                                class="w-full sm:w-1/3 py-2 bg-green-600 text-white font-semibold rounded-lg shadow-md hover:bg-green-700 transition duration-150">
+                            選擇並匯入檔案
                         </button>
-                    </section>
-
-                    <!-- 3. 請假單審核 -->
-                    <section class="bg-white p-6 rounded-2xl shadow-lg">
-                        <h2 class="text-2xl font-semibold mb-4 text-indigo-700">③ 請假單審核</h2>
-                        <div v-if="pendingApplications.length === 0" class="text-slate-500 text-center py-6">
-                            目前沒有待審核的請假單。
-                        </div>
-                        <div v-else class="space-y-4">
-                            <div v-for="app in pendingApplications" :key="app.id" class="border border-slate-200 rounded-lg p-4 bg-slate-50">
-                                <div class="flex justify-between items-start">
-                                    <div>
-                                        <p class="font-bold text-lg">{{ app.className }} - {{ app.studentSeat }} 號 {{ app.studentName }}</p>
-                                        <p class="text-sm text-slate-600">
-                                            <span class="font-semibold">{{ app.leaveType === 'sick' ? '病假' : '事假' }}</span>
-                                            - ({{ formatDateTime(app.startDate) }} 至 {{ formatDateTime(app.endDate) }})
-                                        </p>
-                                        <!-- 已修正: 顯示學生驗證資訊 -->
-                                        <p class="text-xs text-slate-400 mt-1">
-                                            追蹤 UID: {{ app.studentUid.substring(0, 8) }}...
-                                        </p>
-                                    </div>
-                                    <span class="text-sm font-medium text-yellow-600 bg-yellow-100 px-3 py-1 rounded-full">待審核</span>
-                                </div>
-                                <p class="mt-2 text-slate-800">理由：{{ app.reason }}</p>
-                                <div class="flex gap-2 mt-4">
-                                    <button @click="updateApplicationStatus(app.id, 'approved')" class="bg-green-500 hover:bg-green-600 text-white px-4 py-1 rounded-md font-semibold text-sm">批准</button>
-                                    <button @click="updateApplicationStatus(app.id, 'rejected')" class="bg-red-500 hover:bg-red-600 text-white px-4 py-1 rounded-md font-semibold text-sm">駁回</button>
-                                </div>
-                            </div>
-                        </div>
-                    </section>
-                    
-                    <!-- 4. 請假資料查詢與匯出 (新增功能) -->
-                    <section class="bg-white p-6 rounded-2xl shadow-lg">
-                        <h2 class="text-2xl font-semibold mb-4 text-indigo-700">④ 歷史請假資料查詢與匯出</h2>
-                        
-                        <div v-if="!currentClass" class="text-center text-slate-500 py-4 border rounded-lg">
-                            請先選擇一個班級。
-                        </div>
-
-                        <div v-else class="space-y-4">
-                            <!-- 查詢篩選器 -->
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 bg-indigo-50 p-4 rounded-lg border border-indigo-200">
-                                <div>
-                                    <label for="query-start-date" class="block text-sm font-medium text-slate-700">起始日期 (請假開始日)</label>
-                                    <input type="date" id="query-start-date" v-model="queryFilter.startDate" class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg">
-                                </div>
-                                <div>
-                                    <label for="query-end-date" class="block text-sm font-medium text-slate-700">結束日期 (請假開始日)</label>
-                                    <input type="date" id="query-end-date" v-model="queryFilter.endDate" class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg">
-                                </div>
-                                <div>
-                                    <label for="query-status" class="block text-sm font-medium text-slate-700">假單狀態</label>
-                                    <select id="query-status" v-model="queryFilter.status" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md appearance-none form-select">
-                                        <option value="all">所有狀態</option>
-                                        <option value="pending">待審核</option>
-                                        <option value="approved">已批准</option>
-                                        <option value="rejected">已駁回</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <!-- 查詢按鈕 -->
-                            <button @click="fetchLeaveData" :disabled="isQuerying" class="w-full bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 font-bold disabled:bg-indigo-400 flex items-center justify-center transition-colors">
-                                <svg v-if="isQuerying" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                                {{ isQuerying ? '查詢中...' : '開始查詢' }}
-                            </button>
-
-                            <!-- 查詢結果 -->
-                            <div v-if="!isQuerying && queriedApplications.length > 0" class="mt-6 border-t pt-4">
-                                <h3 class="text-xl font-semibold mb-3">查詢結果 (共 {{ queriedApplications.length }} 筆)</h3>
-                                
-                                <!-- 匯出選項 -->
-                                <div class="flex gap-4 items-center mb-4">
-                                    <label for="export-format" class="text-sm font-medium text-slate-700">匯出格式:</label>
-                                    <select id="export-format" v-model="exportFormat" class="pl-3 pr-10 py-1 text-base border-gray-300 rounded-md appearance-none form-select w-32">
-                                        <option value="xlsx">XLSX (.xlsx)</option>
-                                        <option value="csv">CSV (.csv)</option>
-                                    </select>
-                                    <button @click="exportLeaveData" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 font-semibold text-sm transition-colors flex items-center">
-                                        <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                                        匯出資料
-                                    </button>
-                                </div>
-
-                                <!-- 結果表格預覽 -->
-                                <div class="max-h-96 overflow-y-auto border rounded-lg shadow-inner">
-                                    <table class="min-w-full divide-y divide-slate-200">
-                                        <thead class="bg-slate-50 sticky top-0">
-                                            <tr>
-                                                <th class="px-3 py-2 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">座號</th>
-                                                <th class="px-3 py-2 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">姓名</th>
-                                                <th class="px-3 py-2 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">假別</th>
-                                                <th class="px-3 py-2 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">期間</th>
-                                                <th class="px-3 py-2 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">事由</th>
-                                                <th class="px-3 py-2 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">狀態</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody class="bg-white divide-y divide-slate-200 text-sm">
-                                            <tr v-for="app in queriedApplications" :key="app.id">
-                                                <td class="px-3 py-2 whitespace-nowrap">{{ app.studentSeat }}</td>
-                                                <td class="px-3 py-2 whitespace-nowrap">{{ app.studentName }}</td>
-                                                <td class="px-3 py-2 whitespace-nowrap">{{ app.leaveType === 'sick' ? '病假' : '事假' }}</td>
-                                                <td class="px-3 py-2 whitespace-nowrap">{{ formatDateTime(app.startDate).slice(0, 10) }} ~ {{ formatDateTime(app.endDate).slice(0, 10) }}</td>
-                                                <td class="px-3 py-2 text-slate-600 truncate max-w-xs" :title="app.reason">{{ app.reason }}</td>
-                                                <td class="px-3 py-2 whitespace-nowrap">
-                                                    <span :class="{'bg-green-100 text-green-800': app.status === 'approved', 'bg-red-100 text-red-800': app.status === 'rejected', 'bg-yellow-100 text-yellow-800': app.status === 'pending'}" class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full">
-                                                        {{ app.status === 'approved' ? '已批准' : (app.status === 'rejected' ? '已駁回' : '待審核') }}
-                                                    </span>
-                                                </td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                            <div v-else-if="!isQuerying" class="text-center text-slate-500 py-6 border rounded-lg bg-slate-50">
-                                {{ queriedApplications.length === 0 ? '沒有符合篩選條件的請假資料。請調整篩選條件後再次查詢。' : '' }}
-                            </div>
-                        </div>
-                    </section>
-                </template>
+                    </div>
+                </div>
+                
+                <!-- 學生清單預覽 (還原為圖片中的網格顯示) -->
+                <div id="roster-display-container">
+                    <p class="text-sm font-medium text-gray-700 mb-2">當前學生名單預覽:</p>
+                    <div id="roster-list-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 p-3 bg-gray-50 rounded-lg max-h-60 overflow-y-auto">
+                        <p class="text-gray-500 col-span-3">目前沒有載入的班級名單。</p>
+                    </div>
+                </div>
+                <p class="text-xs text-gray-400 mt-2">* 點名時將使用學號/ID 欄位作為學生識別。</p>
+            </div>
+            
+            <!-- ② 每日點名 (已更新為圖片樣式) -->
+            <div class="section-card">
+                <div class="section-header">
+                    <i class="fas fa-check-circle section-icon"></i>
+                    <h2 class="text-xl font-bold text-gray-800">每日點名 </h2>
+                </div>
+                
+                <!-- 日期選擇器 (加寬) -->
+                <div class="flex flex-col sm:flex-row sm:items-center mb-6 gap-2">
+                    <label for="roll-call-date" class="block text-sm font-medium text-gray-700 mr-4 whitespace-nowrap">選擇點名日期:</label>
+                    <!-- Date input uses w-full to match the image's layout -->
+                    <input type="date" id="roll-call-date" 
+                           class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-lg">
+                </div>
+                
+                <!-- 點名網格：3欄(手機)到9欄(桌機) -->
+                <div id="roll-call-grid" class="grid grid-cols-3 sm:grid-cols-6 lg:grid-cols-9 gap-4 mb-6">
+                    <p class="text-gray-500 col-span-full text-center">請先匯入班級名單。</p>
+                    <!-- 點名按鈕將在此處載入 -->
+                </div>
+                
+                <!-- 儲存按鈕 (更新文字和顏色) -->
+                <button onclick="saveDailyRollCall()"
+                        class="w-full py-3 text-white font-bold rounded-lg shadow-xl transition duration-200 ease-in-out disabled:opacity-50 bg-[#1EAD61] hover:bg-[#159A55]"
+                        id="save-roll-call-btn">
+                    儲存今日點名紀錄
+                </button>
             </div>
 
-            <!-- ======================= -->
-            <!--    學生請假介面 (Student)   -->
-            <!-- ======================= -->
-            <div v-if="view === 'student'" class="space-y-8">
-                <section class="bg-white p-6 rounded-2xl shadow-lg">
-                    <h2 class="text-2xl font-semibold mb-6 text-indigo-700">② 填寫請假單</h2>
-                    
-                    <!-- 身份驗證區塊 (已移除 Google 登入，改為使用環境認證) -->
-                    <div v-if="!isAuthReady" class="text-center py-10 border border-slate-200 rounded-xl bg-slate-50">
-                        <h3 class="text-xl font-semibold mb-4 text-slate-800">正在檢查連線...</h3>
-                        <p class="text-slate-600 mb-6">請等待系統初始化。</p>
-                    </div>
-
-                    <!-- 請假單表單區塊 -->
-                    <div v-else>
-                        <div class="flex justify-between items-center mb-4 border-b pb-3 bg-green-50 p-3 rounded-lg">
-                            <p class="font-semibold text-lg text-green-700">
-                                <span class="inline-block bg-green-200 px-3 py-1 rounded-full mr-2">已驗證</span> 
-                                學生會話已啟用
-                            </p>
-                             <p class="text-sm text-slate-500">
-                                追蹤 UID: <code class="bg-slate-200 px-2 rounded">{{ userId.substring(0, 8) }}...</code>
-                            </p>
-                        </div>
-                        <div class="p-2 mb-4 bg-yellow-100 rounded-lg text-sm text-yellow-800">
-                            **重要提示：** 由於此沙盒環境無法進行 Google 網域驗證，您的請假單將使用上方的 **追蹤 UID** 進行身份記錄。請直接填寫下方表單。
-                        </div>
-                        
-                        <div class="space-y-4">
-                            <div>
-                                <label for="teacher-id" class="block text-sm font-medium text-slate-700">老師的使用者 ID</label>
-                                <input type="text" id="teacher-id" v-model.trim="leaveForm.teacherId" @change="fetchTeacherClasses" placeholder="請向您的老師詢問 (例如: {{ userId }})" class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
-                            </div>
-
-                            <div>
-                                <label for="student-class" class="block text-sm font-medium text-slate-700">您的班級</label>
-                                <select id="student-class" v-model="leaveForm.classId" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md appearance-none form-select" :disabled="!leaveForm.teacherId || teacherClasses.length === 0">
-                                    <option disabled value="">{{ teacherClasses.length ? '請選擇班級' : '請先輸入正確的老師ID' }}</option>
-                                    <option v-for="c in teacherClasses" :key="c.id" :value="c.id">{{ c.name }}</option>
-                                </select>
-                            </div>
-                            
-                            <!-- 學生姓名選擇下拉式選單 (替換了座號與姓名輸入框) -->
-                            <div>
-                                <label for="student-name-select" class="block text-sm font-medium text-slate-700">您的姓名與座號</label>
-                                <select id="student-name-select" v-model="leaveForm.studentName" :disabled="!leaveForm.classId || selectedClassStudents.length === 0"
-                                    class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md appearance-none form-select">
-                                    <option disabled value="">
-                                        {{ !leaveForm.classId ? '請先選擇班級' : (selectedClassStudents.length ? '請選擇您的姓名' : '該班級沒有學生名單') }}
-                                    </option>
-                                    <option v-for="student in selectedClassStudents" :key="student.seat" :value="student.name">
-                                        {{ student.seat }} 號 - {{ student.name }}
-                                    </option>
-                                </select>
-                                <p class="text-xs text-slate-500 mt-1">
-                                    <span v-if="leaveForm.studentName && leaveForm.studentSeat">已選：{{ leaveForm.studentName }} (座號 {{ leaveForm.studentSeat }})</span>
-                                    <span v-else>請確認選擇您在名單上的正確姓名。</span>
-                                </p>
-                            </div>
-                            <!-- 隱藏的座號輸入框，其值由選單連動決定 -->
-                            <input type="hidden" v-model.number="leaveForm.studentSeat" />
-
-
-                            <div>
-                                <label for="leave-type" class="block text-sm font-medium text-slate-700">假別</label>
-                                <select id="leave-type" v-model="leaveForm.leaveType" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md appearance-none form-select">
-                                    <option value="sick">病假</option>
-                                    <option value="personal">事假</option>
-                                </select>
-                            </div>
-                            
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div>
-                                    <label for="start-date" class="block text-sm font-medium text-slate-700">開始時間</label>
-                                    <input type="datetime-local" id="start-date" v-model="leaveForm.startDate" class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg">
-                                </div>
-                                <div>
-                                    <label for="end-date" class="block text-sm font-medium text-slate-700">結束時間</label>
-                                    <input type="datetime-local" id="end-date" v-model="leaveForm.endDate" class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg">
-                                </div>
-                            </div>
-
-                            <div>
-                                <label for="leave-reason" class="block text-sm font-medium text-slate-700">請假事由</label>
-                                <textarea id="leave-reason" v-model.trim="leaveForm.reason" rows="3" class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg" placeholder="請簡述請假原因"></textarea>
-                            </div>
-
-                            <button @click="submitLeaveApplication" class="w-full mt-6 bg-indigo-600 text-white px-4 py-3 rounded-lg hover:bg-indigo-700 font-bold text-lg">
-                                送出請假單
-                            </button>
-                        </div>
-                    </div>
-                </section>
+            <!-- ③ 請假單審核 (待審核列表) -->
+            <div class="section-card">
+                <div class="section-header">
+                    <i class="fas fa-file-alt section-icon"></i>
+                    <h2 class="text-xl font-bold text-gray-800">請假單審核</h2>
+                </div>
+                <ul id="admin-pending-list" class="space-y-3">
+                    <p class="text-gray-500 p-4 bg-white rounded-lg border">目前沒有待審核的請假單。</p>
+                </ul>
             </div>
-
-        </main>
-        
-        <!-- Modal 彈窗 -->
-        <div v-if="modal.show" class="modal-overlay">
-            <div class="modal-content text-center">
-                <h3 class="text-xl font-bold text-slate-800">{{ modal.title }}</h3>
-                <p class="text-slate-600 my-4" v-html="modal.message"></p>
-                <div class="flex justify-center gap-4">
-                    <button v-if="modal.confirmText" @click="modal.onConfirm" class="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 font-semibold">{{ modal.confirmText }}</button>
-                    <button @click="modal.onCancel" class="bg-slate-200 text-slate-800 px-6 py-2 rounded-lg hover:bg-slate-300 font-semibold">{{ modal.cancelText || '關閉' }}</button>
+            
+            <!-- ④ 歷史請假資料查詢與匯出 -->
+            <div class="section-card">
+                <div class="section-header">
+                    <i class="fas fa-search section-icon"></i>
+                    <h2 class="text-xl font-bold text-gray-800">歷史請假資料查詢與匯出</h2>
+                </div>
+                
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-4 items-end">
+                    <div class="md:col-span-1">
+                        <label for="start-date-input" class="block text-sm font-medium text-gray-700">起始日期:</label>
+                        <input type="date" id="start-date-input" class="mt-1 block w-full p-2 border border-gray-300 rounded-lg">
+                    </div>
+                    <div class="md:col-span-1">
+                        <label for="end-date-input" class="block text-sm font-medium text-gray-700">結束日期:</label>
+                        <input type="date" id="end-date-input" class="mt-1 block w-full p-2 border border-gray-300 rounded-lg">
+                    </div>
+                    <button onclick="searchLeaveHistory()"
+                            class="w-full py-2 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 transition duration-150">
+                        <i class="fas fa-search mr-1"></i> 查詢紀錄
+                    </button>
+                    <button onclick="exportLeaveHistory()"
+                            class="w-full py-2 bg-yellow-600 text-white font-semibold rounded-lg shadow-md hover:bg-yellow-700 transition duration-150 disabled:opacity-50"
+                            id="export-csv-btn" disabled>
+                        <i class="fas fa-download mr-1"></i> 匯出 CSV
+                    </button>
+                </div>
+                
+                <div id="leave-query-results" class="mt-4 p-4 bg-white rounded-lg border border-gray-200 shadow-inner">
+                    <h3 class="text-lg font-semibold mb-3">查詢結果 (<span id="query-count">0</span> 筆):</h3>
+                    <ul id="query-result-list" class="divide-y divide-gray-100 max-h-60 overflow-y-auto">
+                        <p class="text-gray-500 text-sm p-2">請輸入日期範圍進行查詢。</p>
+                    </ul>
                 </div>
             </div>
         </div>
+
     </div>
 
-    <!-- Firebase -->
+    <!-- Firebase SDKs -->
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { 
-            getAuth, 
-            signInAnonymously, 
-            signInWithCustomToken, 
-            onAuthStateChanged
-        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { 
-            getFirestore, 
-            doc, 
-            getDoc, 
-            addDoc, 
-            setDoc, 
-            updateDoc, 
-            deleteDoc, 
-            onSnapshot, 
-            collection, 
-            query, 
-            where, 
-            getDocs,
-            Timestamp,
-            serverTimestamp,
-            writeBatch 
-        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, setPersistence, browserSessionPersistence } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-auth.js";
+        import { getFirestore, doc, collection, query, addDoc, updateDoc, Timestamp, setDoc, where, getDocs, setLogLevel } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore.js";
+        import { onSnapshot } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore.js";
+        
+        // 啟用 Firebase 偵錯日誌 (除錯用)
+        setLogLevel('debug');
 
-        // Vue 已經在 CDN 載入，可以直接使用全域 Vue 物件
-        const { createApp, ref, computed, onMounted, watch } = Vue;
+        // --- 外部 Firebase 配置 (保持不變) ---
+        const externalFirebaseConfig = {
+            apiKey: "AIzaSyAko3jZkh_OGTw7kqxFwhX5SRJtbNll0Cw",
+            authDomain: "roll-ppshclass.firebaseapp.com",
+            projectId: "roll-ppshclass",
+            storageBucket: "roll-ppshclass.firebasestorage.app",
+            messagingSenderId: "690929841439",
+            appId: "1:690929841439:web:9f3653ce07e64ba461ac2a",
+            measurementId: "G-WYP0NLT1RD"
+        };
+        
+        // --- 全域變數與常量 ---
+        const ADMIN_PASSWORD = 'admin123'; 
+        let db;
+        let auth;
+        let userId = null; // Session User ID (for device identification)
+        
+        // *** 學生身份追蹤 (用於請假紀錄) ***
+        let selectedStudentId = null; 
+        let selectedStudentName = null; 
+        // ------------------------------------------
 
-        // --- 檔案解析輔助函數 (不變) ---
+        let appState = 'entry'; 
+        let attendanceRecords = []; 
+        let leaveRequests = []; 
+        let studentRoster = []; // 學生名單 [{id, name, number, ...other fields}]
+        let rosterHeaders = []; 
+        let className = "預設班級"; 
+        let queryResults = []; 
+
+        // 每日點名專用狀態
+        let currentAttendanceDate; 
+        let dailyRollCallState = {}; 
+        
+        // Firestore Collection Paths
+        const ATTENDANCE_PATH = `attendance`;
+        const LEAVE_REQUESTS_PATH = `leave_requests`;
+        const ROSTER_PATH = `roster/class_data`; 
+
+        // --- Firebase 初始化與驗證 (保持不變) ---
+
+        async function initFirebase() {
+            try {
+                const app = initializeApp(externalFirebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+                
+                await setPersistence(auth, browserSessionPersistence);
+                await signInAnonymously(auth);
+                
+                onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        userId = user.uid;
+                        document.getElementById('user-id-display').textContent = `會話 ID: ${userId.substring(0, 8)}...`;
+                        startFirestoreListeners();
+                    } else {
+                        userId = null;
+                        document.getElementById('user-id-display').textContent = '未登入';
+                    }
+                    renderUI(); 
+                });
+                
+            } catch (error) {
+                console.error("Firebase 初始化錯誤:", error);
+                showMessage('Firebase 初始化失敗，請檢查配置或網路連線。', 'error');
+            }
+        }
+        
+        // --- 學生身份選擇處理 (保持不變) ---
+
+        /**
+         * 渲染學生選擇下拉選單。
+         */
+        function renderStudentIdentitySelector() {
+            const select = document.getElementById('student-select');
+            
+            // 清空舊選項
+            select.innerHTML = ''; 
+
+            if (studentRoster.length === 0) {
+                select.innerHTML = '<option value="" disabled selected>-- 班級名單未設定 --</option>';
+            } else {
+                select.innerHTML = '<option value="" disabled selected>-- 請選擇您的姓名 --</option>';
+                
+                // 根據名單中的 id 和 name 建立選項
+                studentRoster.forEach(student => {
+                    // 將 {id, name} JSON 化作為 value，方便取用
+                    const value = JSON.stringify({ id: student.id, name: student.name });
+                    select.innerHTML += `<option value='${value}'>${student.number}號 - ${student.name} (${student.id})</option>`;
+                });
+            }
+        }
         
         /**
-         * 識別包含學生姓名的欄位索引
+         * 處理學生下拉選單選擇變動。
          */
-        function findNameIndex(header) {
-            let nameIndex = -1;
-            const targetHeaders = ["姓名", "name", "學生姓名", "studentname", "student name"];
+        window.updateStudentIdentity = function() {
+            const select = document.getElementById('student-select');
+            const selectedValue = select.value;
 
-            for (let i = 0; i < header.length; i++) {
-                const cleanHeader = String(header[i]).trim().toLowerCase().replace(/"/g, '');
-                if (targetHeaders.includes(cleanHeader)) {
-                    nameIndex = i;
-                    break;
+            if (selectedValue) {
+                try {
+                    const identity = JSON.parse(selectedValue);
+                    selectedStudentId = identity.id;
+                    selectedStudentName = identity.name;
+                    document.getElementById('selected-student-info').textContent = `已選擇: ${selectedStudentName} (學號: ${selectedStudentId})`;
+                    renderStudentRecords(); // 重新渲染學生的請假紀錄
+                } catch (e) {
+                    console.error("解析學生身份失敗:", e);
+                    selectedStudentId = null;
+                    selectedStudentName = null;
+                    document.getElementById('selected-student-info').textContent = `身份選擇錯誤。`;
+                }
+            } else {
+                selectedStudentId = null;
+                selectedStudentName = null;
+                document.getElementById('selected-student-info').textContent = `尚未選擇身份，無法操作請假。`;
+            }
+            // 重新渲染UI以啟用或禁用按鈕
+            renderUI();
+        }
+
+
+        // --- 狀態與角色切換邏輯 (保持不變) ---
+        
+        window.setAppState = function(newState) {
+            appState = newState;
+            if (newState !== 'entry') {
+                document.getElementById('back-to-entry-button').classList.remove('hidden');
+            } else {
+                document.getElementById('back-to-entry-button').classList.add('hidden');
+            }
+            queryResults = []; 
+            if (newState === 'admin') {
+                const today = new Date().toISOString().split('T')[0];
+                document.getElementById('roll-call-date').value = today;
+                currentAttendanceDate = today;
+                initializeRollCallState(today);
+            }
+            renderUI(); 
+        }
+
+        window.enterStudentView = function() {
+            setAppState('student');
+        }
+
+        window.showAdminPasswordPrompt = function() {
+            setAppState('password_prompt');
+            document.getElementById('admin-password-input').value = ''; 
+        }
+
+        window.checkAdminPassword = function() {
+            const inputPassword = document.getElementById('admin-password-input').value;
+            if (inputPassword === ADMIN_PASSWORD) {
+                setAppState('admin');
+                showMessage('管理者登入成功！', 'success');
+            } else {
+                showMessage('密碼錯誤，請重試。', 'error');
+                document.getElementById('admin-password-input').value = '';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const rollCallDateInput = document.getElementById('roll-call-date');
+            if (rollCallDateInput) {
+                rollCallDateInput.addEventListener('change', (e) => {
+                    currentAttendanceDate = e.target.value;
+                    initializeRollCallState(currentAttendanceDate);
+                    renderDailyRollCall();
+                });
+            }
+        });
+
+
+        // --- ① 班級名單管理功能 (保持不變) ---
+        
+        function parseCSV(csvText) {
+            const lines = csvText.trim().split('\n');
+            if (lines.length < 2) return { roster: [], headers: [] }; 
+
+            const headers = lines[0].split(',').map(h => h.trim());
+            
+            const idKey = headers.find(h => h.includes('學號') || h.includes('ID') || h.toLowerCase() === 'id') || headers[0];
+            const nameKey = headers.find(h => h.includes('姓名') || h.includes('Name') || h.toLowerCase() === 'name') || headers[1];
+
+            const roster = [];
+            let number = 1;
+
+            for (let i = 1; i < lines.length; i++) { 
+                const line = lines[i].trim();
+                if (line) {
+                    const parts = line.split(',');
+                    
+                    if (parts.length === headers.length) {
+                        const student = {};
+                        
+                        headers.forEach((header, index) => {
+                            student[header] = parts[index].trim();
+                        });
+
+                        student.number = number++;
+                        student.id = student[idKey] || parts[0].trim(); 
+                        student.name = student[nameKey] || parts[1].trim(); 
+                        
+                        // 確保 ID 和 Name 存在
+                        if (student.id && student.name) {
+                             roster.push(student);
+                        }
+                    }
                 }
             }
-            return nameIndex;
+            return { roster: roster, headers: headers };
+        }
+
+        window.uploadRosterFile = function() {
+            if (appState !== 'admin' || !db) { showMessage('權限不足或系統未初始化。', 'error'); return; }
+            const file = document.getElementById('roster-file-input').files[0];
+            if (!file || file.name.slice(-4).toLowerCase() !== '.csv') { 
+                showMessage('請先選擇一個有效的 CSV 檔案。', 'warning'); return; 
+            }
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const { roster: newRoster, headers: newHeaders } = parseCSV(e.target.result);
+                
+                if (newRoster.length === 0) {
+                    showMessage('CSV 檔案內容無效或格式錯誤 (請確保包含標題行和至少一筆資料)。', 'error'); return;
+                }
+                
+                saveRoster(newRoster, className, newHeaders); 
+            };
+            
+            try {
+                reader.readAsText(file, 'Big5');
+            } catch (error) {
+                console.warn("Big5 encoding not supported, falling back to UTF-8.", error);
+                showMessage('Big5 編碼讀取失敗，嘗試使用 UTF-8。若仍有亂碼，請將檔案轉為 UTF-8 編碼。', 'warning');
+                reader.readAsText(file, 'UTF-8');
+            }
+            
+        }
+        
+        function saveRoster(roster, name, headers) {
+            const docRef = doc(db, ROSTER_PATH);
+            setDoc(docRef, { 
+                list: JSON.stringify(roster), 
+                headers: JSON.stringify(headers), 
+                className: name,
+                updatedAt: Timestamp.now() 
+            })
+                .then(() => {
+                    showMessage(`名單成功上傳！共 ${roster.length} 筆學生資料。`, 'success');
+                    document.getElementById('roster-file-input').value = ''; 
+                })
+                .catch(error => {
+                    console.error("儲存名單失敗:", error);
+                    showMessage('儲存名單失敗，請查看控制台錯誤。', 'error');
+                });
+        }
+        
+        window.saveClassName = function() {
+            const newName = document.getElementById('class-name-input').value.trim();
+            if (!newName) { showMessage('班級名稱不能為空。', 'warning'); return; }
+            if (studentRoster.length === 0) {
+                className = newName; 
+                document.getElementById('roster-count').textContent = `(共 0 人)`;
+                showMessage(`班級名稱已更新為 ${newName}，請上傳名單。`, 'success');
+                return;
+            }
+            saveRoster(studentRoster, newName, rosterHeaders); 
+        }
+
+        window.deleteRoster = function() {
+            if (confirm("確定要刪除整個班級名單嗎？此操作不可逆。")) {
+                const docRef = doc(db, ROSTER_PATH);
+                setDoc(docRef, { 
+                    list: JSON.stringify([]), 
+                    headers: JSON.stringify([]), 
+                    className: className,
+                    updatedAt: Timestamp.now() 
+                })
+                .then(() => {
+                    showMessage('班級名單已清空。', 'success');
+                })
+                .catch(error => {
+                    console.error("清空名單失敗:", error);
+                    showMessage('清空名單失敗。', 'error');
+                });
+            }
+        }
+        
+        /**
+         * 從 Firestore 載入學生名單和標題。
+         */
+        function loadRoster() {
+            if (!db) return;
+            const docRef = doc(db, ROSTER_PATH);
+            onSnapshot(docRef, (doc) => {
+                if (doc.exists()) {
+                    const data = doc.data();
+                    try {
+                        studentRoster = JSON.parse(data.list || '[]');
+                        rosterHeaders = JSON.parse(data.headers || '[]'); 
+                        className = data.className || "預設班級";
+                    } catch (e) {
+                        console.error("解析學生名單或標題失敗:", e);
+                        studentRoster = [];
+                        rosterHeaders = [];
+                    }
+                } else {
+                    studentRoster = [];
+                    rosterHeaders = [];
+                }
+                
+                // 學生名單更新時，需要重新渲染身份選擇器
+                renderStudentIdentitySelector(); 
+
+                document.getElementById('roster-count').textContent = `(共 ${studentRoster.length} 人)`;
+                document.getElementById('class-name-input').value = className;
+                
+                if (currentAttendanceDate) {
+                    initializeRollCallState(currentAttendanceDate);
+                }
+                
+                renderUI(); // 呼叫 UI 渲染，會根據 appState 決定顯示哪個介面
+            }, (error) => {
+                 console.error("Error listening to roster:", error);
+            });
+        }
+
+        // --- ② 每日點名功能 (更新為整合請假狀態) ---
+        
+        /**
+         * 檢查請假申請的時間範圍是否與指定的單日點名日期重疊。
+         * @param {Object} leave - 請假資料物件
+         * @param {string} dateKey - 點名日期 (YYYY-MM-DD)
+         * @returns {boolean} 是否重疊
+         */
+        function checkLeaveOverlap(leave, dateKey) {
+            if (!leave.startDateTime || !leave.endDateTime) return false;
+
+            // 將單日點名日期轉換為當天的起點和終點時間戳記
+            const rollCallStart = new Date(dateKey + 'T00:00:00').getTime();
+            const rollCallEnd = new Date(dateKey + 'T23:59:59').getTime();
+            
+            // 將請假日期時間轉換為時間戳記
+            const leaveStart = new Date(leave.startDateTime).getTime();
+            const leaveEnd = new Date(leave.endDateTime).getTime();
+
+            // 檢查兩個時間區間 [rollCallStart, rollCallEnd] 和 [leaveStart, leaveEnd] 是否有交集
+            // 只要 (請假開始 < 點名結束) 且 (請假結束 > 點名開始) 即為重疊
+            return leaveStart < rollCallEnd && leaveEnd > rollCallStart;
+        }
+
+        function initializeRollCallState(dateKey) {
+            if (!studentRoster.length) {
+                dailyRollCallState = {};
+                return;
+            }
+
+            // 1. 取得先前儲存的手動點名狀態 (Admin's last decision)
+            const todayAttendance = attendanceRecords.filter(r => r.dateKey === dateKey && r.type === 'DailyRollCall');
+            const savedState = {};
+            todayAttendance.forEach(record => {
+                // 僅記錄最新的點名狀態
+                if (!savedState[record.studentId] || record.timestamp.seconds > savedState[record.studentId].timestamp.seconds) {
+                    savedState[record.studentId] = record.status; 
+                }
+            });
+            
+            // 2. 取得當日重疊且已核准的請假狀態 (Initial state override)
+            const overlappingApprovedLeaves = leaveRequests.filter(r => 
+                r.status === 'Approved' && checkLeaveOverlap(r, dateKey)
+            );
+            
+            const leaveState = {};
+            overlappingApprovedLeaves.forEach(leave => {
+                // 如果學生在當日有任何已核准的請假，則將其標記為 'Leave'
+                leaveState[leave.studentId] = 'Leave'; 
+            });
+
+            // 3. 結合狀態並設定最終的 dailyRollCallState
+            dailyRollCallState = {};
+            studentRoster.forEach(student => {
+                const studentId = student.id;
+                
+                // Priority 1: 採用先前儲存的手動狀態
+                if (savedState[studentId]) {
+                     dailyRollCallState[studentId] = savedState[studentId];
+                } 
+                // Priority 2: 如果沒有手動狀態，檢查是否有已核准的請假，若有則設定為 'Leave'
+                else if (leaveState[studentId] === 'Leave') {
+                    dailyRollCallState[studentId] = 'Leave'; 
+                }
+                // Priority 3: 預設為 'Present'
+                else {
+                    dailyRollCallState[studentId] = 'Present'; 
+                }
+            });
+        }
+        
+        /**
+         * 點名狀態切換邏輯。
+         * Leave -> Present (管理員手動覆蓋請假，視為到校) -> Absent -> Late -> Present
+         */
+        window.toggleStudentStatus = function(studentId) {
+            const currentStatus = dailyRollCallState[studentId] || 'Present';
+            let newStatus;
+            
+            if (currentStatus === 'Leave') {
+                newStatus = 'Present'; // 覆蓋：從請假改為到校
+            } else if (currentStatus === 'Present') {
+                newStatus = 'Absent';
+            } else if (currentStatus === 'Absent') {
+                newStatus = 'Late';
+            } else { // CurrentStatus === 'Late'
+                newStatus = 'Present';
+            }
+            
+            dailyRollCallState[studentId] = newStatus;
+            renderDailyRollCall();
+        }
+
+        window.saveDailyRollCall = function() {
+            if (appState !== 'admin' || !db) { showMessage('權限不足。', 'error'); return; }
+            if (studentRoster.length === 0) { showMessage('請先匯入學生名單。', 'warning'); return; }
+
+            const dateKey = currentAttendanceDate;
+            if (!dateKey) { showMessage('請選擇點名日期。', 'warning'); return; }
+            
+            const batch = [];
+            const now = Timestamp.now();
+
+            const attendanceCollection = collection(db, ATTENDANCE_PATH);
+
+            studentRoster.forEach(student => {
+                const status = dailyRollCallState[student.id];
+                if (status) {
+                    batch.push(addDoc(attendanceCollection, {
+                        studentId: student.id,
+                        userName: student.name,
+                        status: status,
+                        timestamp: now,
+                        dateKey: dateKey,
+                        type: 'DailyRollCall', // 管理者點名類型
+                        recordedBy: userId // 管理者操作記錄 Session ID
+                    }));
+                }
+            });
+            
+            Promise.all(batch)
+                .then(() => {
+                    showMessage(`已成功儲存 ${studentRoster.length} 筆 ${dateKey} 的點名紀錄！`, 'success');
+                })
+                .catch(error => {
+                    console.error("儲存點名記錄失敗:", error);
+                    showMessage('儲存點名記錄失敗，請查看控制台錯誤。', 'error');
+                });
+        }
+
+        // --- 學生介面功能 (submitLeave 保持不變) ---
+        
+        /**
+         * 學生請假功能。
+         */
+        window.submitLeave = function(event) {
+            event.preventDefault();
+            const startDateInput = document.getElementById('start-date').value;
+            const startTimeInput = document.getElementById('start-time').value;
+            const endDateInput = document.getElementById('end-date').value;
+            const endTimeInput = document.getElementById('end-time').value;
+            const reasonInput = document.getElementById('leave-reason');
+
+            if (!selectedStudentId || !db) { showMessage('請先選擇您的姓名。', 'error'); return; }
+            
+            const reason = reasonInput.value.trim();
+
+            if (!startDateInput || !startTimeInput || !endDateInput || !endTimeInput || !reason) { 
+                showMessage('請填寫完整的請假日期、時間範圍和原因。', 'warning'); 
+                return; 
+            }
+
+            // 組合完整的日期時間字串 (ISO 8601 格式，方便比較)
+            const startDateTime = `${startDateInput}T${startTimeInput}`;
+            const endDateTime = `${endDateInput}T${endTimeInput}`;
+
+            // NEW VALIDATION: 確保起始日期時間不晚於結束日期時間
+            if (new Date(startDateTime).getTime() >= new Date(endDateTime).getTime()) {
+                showMessage('起始日期時間不能晚於或等於結束日期時間，請檢查您的輸入。', 'error');
+                return;
+            }
+
+            const leaveData = {
+                studentId: selectedStudentId, // 使用學生 ID
+                userName: selectedStudentName, // 使用學生名稱
+                startDateTime: startDateTime, // YYYY-MM-DDTHH:MM
+                endDateTime: endDateTime,   // YYYY-MM-DDTHH:MM
+                reason: reason,
+                status: 'Pending',
+                submittedAt: Timestamp.now(),
+                recordedBy: userId // 記錄 Session User ID
+            };
+
+            addDoc(collection(db, LEAVE_REQUESTS_PATH), leaveData)
+                .then(() => {
+                    showMessage('請假申請提交成功！等待管理員審核。', 'success');
+                    // 清空輸入框
+                    document.getElementById('start-date').value = '';
+                    document.getElementById('start-time').value = '08:00';
+                    document.getElementById('end-date').value = '';
+                    document.getElementById('end-time').value = '17:00';
+                    reasonInput.value = '';
+                })
+                .catch((error) => { console.error("請假提交失敗: ", error); showMessage('請假提交失敗，請查看控制台錯誤。', 'error'); });
+        }
+
+        window.updateLeaveStatus = function(docId, newStatus) {
+            if (appState !== 'admin' || !userId || !db) { showMessage('權限不足，只有管理者才能操作。', 'error'); return; }
+            
+            const docRef = doc(db, LEAVE_REQUESTS_PATH, docId);
+            updateDoc(docRef, { status: newStatus })
+            .then(() => {
+                const statusText = newStatus === 'Approved' ? '已批准' : '已拒絕';
+                showMessage(`請假申請 ${docId.substring(0, 6)} 已更新為 ${statusText}。`, 'success');
+            })
+            .catch((error) => { console.error("更新請假狀態失敗: ", error); showMessage('更新狀態失敗，請查看控制台錯誤。', 'error'); });
+        }
+        
+        /**
+         * 將 YYYY-MM-DDTHH:MM 格式轉換為 YYYY/MM/DD HH:MM
+         */
+        function formatDateTime(dateTimeStr) {
+            if (!dateTimeStr) return 'N/A';
+            const [datePart, timePart] = dateTimeStr.split('T');
+            if (datePart && timePart) {
+                return `${datePart.replace(/-/g, '/')} ${timePart}`;
+            }
+            return dateTimeStr.replace(/-/g, '/');
+        }
+
+
+        // --- Firestore 監聽器 (保持不變) ---
+
+        function startFirestoreListeners() {
+            if (!db) return;
+            
+            loadRoster(); 
+
+            onSnapshot(collection(db, ATTENDANCE_PATH), (snapshot) => {
+                attendanceRecords = snapshot.docs.map(doc => ({ 
+                    id: doc.id, 
+                    ...doc.data(),
+                    timestamp: doc.data().timestamp instanceof Timestamp ? doc.data().timestamp : new Timestamp(doc.data().timestamp.seconds, doc.data().timestamp.nanoseconds)
+                }));
+                attendanceRecords.sort((a, b) => b.timestamp.seconds - a.timestamp.seconds);
+                if (currentAttendanceDate) {
+                    initializeRollCallState(currentAttendanceDate);
+                }
+                renderUI();
+            }, (error) => {
+                console.error("Error listening to attendance:", error);
+            });
+
+            onSnapshot(collection(db, LEAVE_REQUESTS_PATH), (snapshot) => {
+                leaveRequests = snapshot.docs.map(doc => ({ 
+                    id: doc.id, 
+                    ...doc.data(),
+                    submittedAt: doc.data().submittedAt instanceof Timestamp ? doc.data().submittedAt : new Timestamp(doc.data().submittedAt.seconds, doc.data().submittedAt.nanoseconds)
+                }));
+                leaveRequests.sort((a, b) => b.submittedAt.seconds - a.submittedAt.seconds);
+                if (currentAttendanceDate) {
+                    initializeRollCallState(currentAttendanceDate);
+                }
+                renderUI();
+            }, (error) => {
+                console.error("Error listening to leave requests:", error);
+            });
+        }
+
+        // --- UI 渲染與控制功能 ---
+
+        function showMessage(text, type = 'info') {
+            const msgBox = document.getElementById('message-box');
+            const color = type === 'success' ? 'bg-green-100 text-green-800 border-green-400' :
+                          type === 'error' ? 'bg-red-100 text-red-800 border-red-400' :
+                          'bg-yellow-100 text-yellow-800 border-yellow-400';
+            
+            msgBox.innerHTML = `<div class="p-3 rounded-lg ${color} border shadow-md text-sm">${text}</div>`;
+            msgBox.classList.remove('hidden');
+            
+            setTimeout(() => {
+                msgBox.classList.add('hidden');
+            }, 4000);
+        }
+        
+        function renderUI() {
+            const entryContent = document.getElementById('entry-view-content');
+            const passwordPrompt = document.getElementById('admin-password-prompt');
+            const studentContent = document.getElementById('student-view-content');
+            const adminContent = document.getElementById('admin-view-content');
+            const backButton = document.getElementById('back-to-entry-button');
+
+            entryContent.classList.add('hidden');
+            passwordPrompt.classList.add('hidden');
+            studentContent.classList.add('hidden');
+            adminContent.classList.add('hidden');
+            backButton.classList.add('hidden');
+
+            // 根據選中的學生身份啟用/禁用學生介面按鈕
+            const isStudentSelected = selectedStudentId !== null;
+            document.getElementById('submit-leave-btn').disabled = !isStudentSelected; // 只需要檢查請假按鈕
+
+
+            if (appState === 'entry') {
+                entryContent.classList.remove('hidden');
+            } else if (appState === 'password_prompt') {
+                passwordPrompt.classList.remove('hidden');
+            } else {
+                backButton.classList.remove('hidden');
+                if (appState === 'student') {
+                    studentContent.classList.remove('hidden');
+                    renderStudentRecords();
+                } else if (appState === 'admin') {
+                    adminContent.classList.remove('hidden');
+                    renderAdminRecords();
+                }
+            }
         }
 
         /**
-         * 解析 CSV 或 XLSX 檔案內容並提取學生姓名
+         * 渲染學生自己的請假紀錄 (點名紀錄已移除)。
+         * 依賴於 selectedStudentId。
          */
-        function extractStudentNames(fileContent, fileName) {
-            const fileExtension = fileName.split('.').pop().toLowerCase();
-            let studentNames = [];
-
-            if (fileExtension === 'csv') {
-                const csvText = fileContent;
-                const lines = csvText.split(/\r\n|\n/).filter(line => line.trim() !== '');
-                if (lines.length < 2) {
-                    throw new Error("CSV 檔案中沒有數據或缺少標題列。");
-                }
-
-                const header = lines[0].split(',');
-                const nameIndex = findNameIndex(header);
-
-                if (nameIndex === -1) {
-                    throw new Error("找不到包含學生姓名的欄位。請確保標題列包含 '姓名' 或 'Name'。");
-                }
-
-                for (let i = 1; i < lines.length; i++) {
-                    const data = lines[i].split(','); 
-                    if (data.length > nameIndex) {
-                        let name = data[nameIndex].trim().replace(/"/g, '');
-                        if (name) {
-                            studentNames.push(name);
-                        }
-                    }
-                }
-
-            } else if (fileExtension === 'xlsx') {
-                if (typeof XLSX === 'undefined') {
-                    throw new Error("XLSX 讀取庫 (SheetJS) 尚未載入。");
-                }
-                
-                const data = new Uint8Array(fileContent);
-                const workbook = XLSX.read(data, { type: 'array' });
-                const firstSheetName = workbook.SheetNames[0];
-                const worksheet = workbook.Sheets[firstSheetName];
-                
-                const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-                
-                if (json.length < 2) {
-                    throw new Error("XLSX 檔案中沒有數據或缺少標題列。");
-                }
-                
-                const header = json[0];
-                const nameIndex = findNameIndex(header);
-
-                if (nameIndex === -1) {
-                    throw new Error("找不到包含學生姓名的欄位。請確保標題列包含 '姓名' 或 'Name'。");
-                }
-
-                for (let i = 1; i < json.length; i++) {
-                    const row = json[i];
-                    if (row.length > nameIndex) {
-                        let name = String(row[nameIndex]).trim();
-                        if (name) {
-                            studentNames.push(name);
-                        }
-                    }
-                }
-
-            } else {
-                throw new Error("不支援的檔案類型。請上傳 .csv 或 .xlsx 檔案。");
+        function renderStudentRecords() {
+            if (!selectedStudentId) {
+                 document.getElementById('my-leave-list').innerHTML = '<p class="text-gray-500 p-2">請先選擇您的身份。</p>';
+                 return;
             }
-
-            if (studentNames.length === 0) {
-                throw new Error("檔案已讀取，但在「姓名」欄位中沒有找到有效的學生名稱。");
-            }
-
-            return studentNames;
+            
+            const myLeaves = leaveRequests.filter(r => r.studentId === selectedStudentId);
+            
+            const leaveList = document.getElementById('my-leave-list');
+            leaveList.innerHTML = myLeaves.length === 0
+                ? '<p class="text-gray-500 p-2">尚無請假申請記錄。</p>'
+                : myLeaves.map(r => `
+                    <li class="p-2 border-b border-gray-100 text-sm">
+                        <div class="flex justify-between items-start">
+                            <!-- 顯示日期時間範圍 -->
+                            <div class="font-medium text-gray-700">
+                                ${formatDateTime(r.startDateTime)} ~ ${formatDateTime(r.endDateTime)}
+                                <span class="text-gray-500 ml-2"> - ${r.reason}</span>
+                            </div> 
+                            <span class="text-xs font-semibold p-1 px-2 rounded-full ${r.status === 'Approved' ? 'bg-green-100 text-green-700' : r.status === 'Rejected' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}">
+                                ${r.status === 'Approved' ? '已批准' : r.status === 'Rejected' ? '已拒絕' : '待審核'}
+                            </span>
+                        </div>
+                    </li>
+                `).join('');
         }
 
-        // --- 檔案解析輔助函數 END ---
-
-
-        createApp({
-            setup() {
-                // --- Firebase & Auth State ---
-                const db = ref(null);
-                const auth = ref(null);
-                const isAuthReady = ref(false);
-                const userId = ref(null); // The current session UID (Teacher/App session UID)
+        /**
+         * 渲染管理員視圖。
+         */
+        function renderAdminRecords() {
+            
+            // ① 學生清單管理
+            document.getElementById('roster-count').textContent = `(共 ${studentRoster.length} 人)`;
+            const rosterListContainer = document.getElementById('roster-list-grid'); 
+            
+            if (studentRoster.length === 0) {
+                rosterListContainer.classList.add('grid', 'grid-cols-1', 'sm:grid-cols-2', 'md:grid-cols-3', 'gap-3', 'p-3');
+                rosterListContainer.classList.remove('p-0');
+                rosterListContainer.innerHTML = '<p class="text-gray-500 col-span-full">目前沒有載入的班級名單。</p>';
+            } else {
+                rosterListContainer.classList.add('grid', 'grid-cols-1', 'sm:grid-cols-2', 'md:grid-cols-3', 'gap-3', 'p-3');
+                rosterListContainer.classList.remove('p-0');
                 
-                const appId = ref(typeof __app_id !== 'undefined' ? __app_id : 'default-app-id');
-                
-                // 簡化為：只要 Auth Ready，就視為已驗證（在當前環境下）
-                const isStudentAuthenticated = computed(() => isAuthReady.value && !!userId.value);
-
-                // --- Global UI State ---
-                const view = ref('teacher'); // 'teacher' or 'student'
-                const modal = ref({ show: false, title: '', message: '', confirmText: '', onConfirm: () => {}, onCancel: () => {} });
-                const today = new Date().toISOString().slice(0, 10);
-
-                // --- Teacher State ---
-                const classes = ref([]); 
-                const newClassName = ref('');
-                const currentClassId = ref(null);
-                const selectedDate = ref(today);
-                const attendanceDoc = ref(null); 
-                const pendingApplications = ref([]); 
-                const approvedLeaves = ref([]); 
-                const csvUploadStatus = ref('');
-                const csvError = ref('');
-
-                // --- Teacher Data Query/Export State (NEW) ---
-                const queryFilter = ref({
-                    // 預設查詢過去 30 天
-                    startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
-                    endDate: today,
-                    status: 'all', // 'all', 'pending', 'approved', 'rejected'
-                });
-                const queriedApplications = ref([]);
-                const exportFormat = ref('xlsx'); // 'xlsx' or 'csv'
-                const isQuerying = ref(false); // Loading state
-
-                let unSubAuth = () => {};
-                let unSubClasses = () => {};
-                let unSubAttendance = () => {};
-                let unSubPendingApps = () => {};
-                let unSubApprovedLeaves = () => {};
-
-                // --- Student State ---
-                const leaveForm = ref({
-                    teacherId: '',
-                    classId: '',
-                    studentSeat: null, // 由選單連動
-                    studentName: '', // 由選單連動
-                    leaveType: 'sick',
-                    startDate: '',
-                    endDate: '',
-                    reason: '',
-                });
-                const teacherClasses = ref([]); 
-                // 新增：儲存選定班級的學生名單
-                const selectedClassStudents = ref([]);
-
-                // === Computed Properties (不變) ===
-                const currentClass = computed(() => {
-                    return classes.value.find(c => c.id === currentClassId.value) || null;
-                });
-                
-                const allStudents = computed(() => {
-                    if (!currentClass.value || !currentClass.value.students || currentClass.value.students.length === 0) {
-                        return [];
-                    }
-                    return currentClass.value.students.map((name, index) => ({
-                        seat: index + 1, // 1-based index as seat number (編號)
-                        name: name
-                    }));
-                });
-                
-                // === Firebase Initialization & Auth Handler (不變) ===
-                
-                const setupAuthListener = () => {
-                    unSubAuth = onAuthStateChanged(auth.value, (user) => {
-                        if (user) {
-                            userId.value = user.uid;
-                            // 無論是 Custom Token 或 匿名登入，都視為教師/App Session
-                            setupTeacherListeners(user.uid);
-                        } else {
-                            // 使用者已登出 (雖然在當前環境很難發生)
-                            userId.value = null;
-                            unSubClasses(); unSubAttendance(); unSubPendingApps(); unSubApprovedLeaves();
-                        }
-                        isAuthReady.value = true;
-                    });
-                };
-
-                const initializeFirebase = async () => {
-                    try {
-                        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
-                        const app = initializeApp(firebaseConfig);
-                        auth.value = getAuth(app);
-                        db.value = getFirestore(app);
-                        
-                        // 1. 設置初始會話 (使用 Custom Token 或匿名登入)
-                        const primaryAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-                        if (primaryAuthToken) {
-                            await signInWithCustomToken(auth.value, primaryAuthToken);
-                        } else {
-                            await signInAnonymously(auth.value);
-                        }
-                        
-                        // 2. 設置 Auth 狀態監聽器
-                        setupAuthListener();
-
-                    } catch (error) {
-                        console.error("Firebase init error:", error);
-                        showModal("連線錯誤", `無法初始化系統，請稍後再試。錯誤： ${error.message}`);
-                    }
-                };
-
-                // === Modal & Helpers (不變) ===
-                const showModal = (title, message, confirmCallback = null, confirmText = '確定') => {
-                    modal.value = {
-                        show: true, title, message,
-                        confirmText: confirmCallback ? confirmText : null,
-                        onConfirm: () => { modal.value.show = false; if(confirmCallback) confirmCallback(); },
-                        onCancel: () => { modal.value.show = false; },
-                    };
-                };
-                
-                const formatDateTime = (isoStringOrTimestamp) => {
-                    if (!isoStringOrTimestamp) return 'N/A';
-                    let d;
-                    // Check if it's a Firestore Timestamp object
-                    if (isoStringOrTimestamp.toDate) {
-                        d = isoStringOrTimestamp.toDate();
-                    } else if (typeof isoStringOrTimestamp === 'string') {
-                        d = new Date(isoStringOrTimestamp);
-                    } else if (isoStringOrTimestamp instanceof Date) {
-                        d = isoStringOrTimestamp;
-                    } else {
-                         return 'N/A';
-                    }
-
-                    try {
-                        return d.toLocaleString('zh-TW', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-                    } catch(e) { return isoStringOrTimestamp; }
-                };
-                
-                const getCollectionPath = (collectionName) => `/artifacts/${appId.value}/public/data/${collectionName}`;
-                const getClassCollectionPath = (uid) => `/artifacts/${appId.value}/users/${uid}/classes`;
-
-                // === Teacher Methods: Class Management (已修改預設班級名稱) ===
-                
-                const createDefaultClasses = async (uid) => {
-                    if (classes.value.length > 0) return; 
-                    console.log("Creating default classes for new user.");
-                    const batch = writeBatch(db.value);
-                    const classCollectionRef = collection(db.value, getClassCollectionPath(uid));
-                    // 預設班級名稱已修改為「國際交流 (範例)」
-                    const defaultClasses = [
-                        { name: "國際交流 (範例)", students: ['小林健太', '瑪麗', '李偉'] }, 
-                        { name: "三年二班 (範例)", students: ['劉大華', '黃小玲', '張偉'] }
-                    ];
-
-                    defaultClasses.forEach(c => {
-                        const newClassRef = doc(classCollectionRef);
-                        batch.set(newClassRef, {
-                            name: c.name,
-                            students: c.students
-                        });
-                    });
-
-                    try {
-                        await batch.commit();
-                        console.log("Default classes created successfully.");
-                    } catch (error) {
-                        console.error("Error creating default classes:", error);
-                    }
-                };
-
-                const setupTeacherListeners = (uid) => {
-                    if (!uid) return;
-                    // 1. 監聽班級
-                    unSubClasses();
-                    const classQuery = query(collection(db.value, getClassCollectionPath(uid)));
-                    unSubClasses = onSnapshot(classQuery, (snapshot) => {
-                        // 修正：將 students 陣列也併入 classes.value
-                        classes.value = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                        
-                        if (snapshot.empty && isAuthReady.value) {
-                            createDefaultClasses(uid);
-                        }
-
-                        if (!currentClassId.value && classes.value.length > 0) {
-                            currentClassId.value = classes.value[0].id;
-                        }
-                    }, (error) => console.error("Error listening to classes:", error));
-
-                    // 2. 監聽待審核假單
-                    unSubPendingApps();
-                    const pendingAppsQuery = query(
-                        collection(db.value, getCollectionPath('leaveApplications')),
-                        where("teacherId", "==", uid),
-                        where("status", "==", "pending")
-                    );
-                    unSubPendingApps = onSnapshot(pendingAppsQuery, (snapshot) => {
-                        pendingApplications.value = snapshot.docs.map(doc => {
-                            const data = doc.data();
-                            const className = classes.value.find(c => c.id === data.classId)?.name || '未知班級';
-                            return { id: doc.id, className, ...data };
-                        });
-                    }, (error) => console.error("Error listening to pending applications:", error));
-                };
-
-                const addClass = async () => {
-                    if (!newClassName.value.trim() || !userId.value) return;
-                    try {
-                        await addDoc(collection(db.value, getClassCollectionPath(userId.value)), {
-                            name: newClassName.value.trim(),
-                            students: []
-                        });
-                        newClassName.value = '';
-                    } catch (error) {
-                        console.error("Error adding class:", error);
-                        showModal("錯誤", "新增班級失敗。");
-                    }
-                };
-                
-                const triggerFileUpload = () => {
-                    const fileInput = document.getElementById('csvFileInput');
-                    if (fileInput) {
-                        fileInput.click();
-                    } else {
-                        csvError.value = "檔案選擇器初始化失敗，請重新載入頁面。";
-                    }
-                };
-
-                const handleFileUpload = (event) => {
-                    const file = event.target.files[0];
-                    if (!file || !currentClass.value) {
-                        csvUploadStatus.value = '';
-                        csvError.value = '請先選擇一個班級';
-                        return;
-                    }
-                    
-                    const fileName = file.name.toLowerCase();
-                    csvUploadStatus.value = `已選擇檔案: ${file.name}，正在解析...`;
-                    csvError.value = '';
-
-                    const reader = new FileReader();
-                    
-                    reader.onload = function(e) {
-                        try {
-                            const studentNames = extractStudentNames(e.target.result, fileName);
-                            updateClassRoster(studentNames);
-                            csvUploadStatus.value = `成功匯入 ${studentNames.length} 位學生。`;
-                            event.target.value = '';
-                        } catch (error) {
-                            csvError.value = error.message;
-                            csvUploadStatus.value = "匯入失敗。";
-                            event.target.value = '';
-                        }
-                    };
-
-                    reader.onerror = function() {
-                        csvError.value = "無法讀取檔案。請確保它是有效的 CSV/XLSX 格式。";
-                        csvUploadStatus.value = "讀取失敗。";
-                        event.target.value = '';
-                    };
-
-                    if (fileName.endsWith('.csv')) {
-                        reader.readAsText(file, 'UTF-8');
-                    } else if (fileName.endsWith('.xlsx')) {
-                        reader.readAsArrayBuffer(file);
-                    } else {
-                         csvError.value = "不支援的檔案類型。請上傳 .csv 或 .xlsx 檔案。";
-                         csvUploadStatus.value = "讀取失敗。";
-                         event.target.value = '';
-                    }
-                };
-
-                const updateClassRoster = async (studentNames) => {
-                    if (!currentClass.value) return;
-                    try {
-                        const classDocRef = doc(db.value, getClassCollectionPath(userId.value), currentClassId.value);
-                        await updateDoc(classDocRef, {
-                            students: studentNames
-                        });
-                        showModal("名單更新成功", `「${currentClass.value.name}」已成功匯入 ${studentNames.length} 位學生。`);
-                    } catch (error) {
-                        console.error("Error updating roster:", error);
-                        showModal("錯誤", "儲存學生名單失敗。");
-                    }
-                };
-                
-                const renameClass = async () => {
-                    if (!currentClass.value) return;
-                    const newName = prompt("請輸入新的班級名稱：", currentClass.value.name);
-                    if (newName && newName.trim() !== currentClass.value.name) {
-                        try {
-                            const classDocRef = doc(db.value, getClassCollectionPath(userId.value), currentClassId.value);
-                            await updateDoc(classDocRef, { name: newName.trim() }); // Corrected docRef usage
-                        } catch (error) {
-                            console.error("Error renaming class:", error);
-                            showModal("錯誤", "重新命名失敗。");
-                        }
-                    }
-                };
-                
-                const requestDeleteClass = () => {
-                    if (!currentClass.value) return;
-                    showModal(
-                        "確定要刪除嗎？",
-                        `您即將刪除「<strong>${currentClass.value.name}</strong>」。<br>此操作將會移除這個班級所有的設定與資料，且無法復原。`,
-                        deleteClass,
-                        "確定刪除"
-                    );
-                };
-                
-                const deleteClass = async () => {
-                    if (!currentClass.value) return;
-                    try {
-                        const classId = currentClass.value.id;
-                        await deleteDoc(doc(db.value, getClassCollectionPath(userId.value), classId));
-                        currentClassId.value = classes.value.length > 0 ? classes.value[0].id : null;
-                        showModal("成功", "班級已刪除。");
-                    } catch (error) {
-                        console.error("Error deleting class:", error);
-                        showModal("錯誤", "刪除班級失敗。");
-                    }
-                };
-
-                // === Teacher Methods: Attendance & Leave Applications (不變) ===
-                
-                const setupAttendanceListener = (classId, date) => {
-                    unSubAttendance();
-                    if (!classId || !date) {
-                        attendanceDoc.value = null;
-                        return;
-                    }
-                    
-                    const attendanceQuery = query(
-                        collection(db.value, getCollectionPath('attendance')),
-                        where("teacherId", "==", userId.value),
-                        where("classId", "==", classId),
-                        where("date", "==", date)
-                    );
-                    
-                    unSubAttendance = onSnapshot(attendanceQuery, (snapshot) => {
-                        if (snapshot.empty) {
-                            attendanceDoc.value = { id: null, records: {}, leaveStudentIds: [] }; 
-                        } else {
-                            const docData = snapshot.docs[0].data();
-                            attendanceDoc.value = {
-                                id: snapshot.docs[0].id,
-                                records: docData.records || {},
-                                leaveStudentIds: docData.leaveStudentIds || []
-                            };
-                        }
-                    }, (error) => console.error("Error listening to attendance:", error));
-                };
-
-                const setupApprovedLeaveListener = (classId, date) => {
-                    unSubApprovedLeaves();
-                    approvedLeaves.value = [];
-                    if (!classId || !date || !userId.value) return;
-
-                    const startOfDay = new Date(date);
-                    startOfDay.setHours(0, 0, 0, 0);
-                    const endOfDay = new Date(date);
-                    endOfDay.setHours(23, 59, 59, 999);
-                    const endOfDayTimestamp = Timestamp.fromDate(endOfDay).toMillis();
-
-                    const approvedLeaveQuery = query(
-                        collection(db.value, getCollectionPath('leaveApplications')),
-                        where("teacherId", "==", userId.value),
-                        where("status", "==", "approved")
-                    );
-                    
-                    unSubApprovedLeaves = onSnapshot(approvedLeaveQuery, (snapshot) => {
-                        
-                        approvedLeaves.value = snapshot.docs
-                            .map(doc => ({ id: doc.id, ...doc.data() }))
-                            .filter(app => {
-                                if (app.classId !== classId) return false;
-                                // 由於 Firestore date/time 儲存為 ISO 字串，我們需要自己進行日期範圍檢查
-                                // 檢查：請假期間是否涵蓋選定日期 (selectedDate)
-                                const appEndDate = new Date(app.endDate).getTime();
-                                const appStartDate = new Date(app.startDate).getTime();
-                                const todayStart = startOfDay.getTime();
-                                
-                                return appStartDate <= endOfDayTimestamp && appEndDate >= todayStart;
-                            });
-                        
-                        updateLeaveStudentsInAttendance();
-
-                    }, (error) => console.error("Error listening to approved leaves:", error));
-                };
-                
-                const isStudentOnLeave = (seat) => {
-                    // 將座號轉換為字串以匹配資料庫中的字串型 studentSeat
-                    return approvedLeaves.value.some(app => parseInt(app.studentSeat) === seat);
-                };
-                
-                const getStudentStatus = (seat) => {
-                    if (isStudentOnLeave(seat)) return 'leave';
-                    return attendanceDoc.value?.records[String(seat)] || 'present'; 
-                };
-
-                const getStudentStatusClass = (seat) => {
-                    const status = getStudentStatus(seat);
-                    return {
-                        'present': 'student-btn present', 'absent': 'student-btn absent',
-                        'late': 'student-btn late', 'leave': 'student-btn leave'
-                    }[status];
-                };
-                
-                const getStudentStatusText = (seat) => {
-                    const status = getStudentStatus(seat);
-                    return {
-                        'present': '到', 'absent': '缺',
-                        'late': '遲', 'leave': '假'
-                    }[status];
-                };
-                
-                const getStudentStatusTextColor = (seat) => {
-                     const status = getStudentStatus(seat);
-                    return {
-                        'present': 'text-green-600', 'absent': 'text-red-600',
-                        'late': 'text-amber-600', 'leave': 'text-indigo-600'
-                    }[status];
-                };
-                
-                const cycleAttendanceStatus = (seat) => {
-                    if (isStudentOnLeave(seat) || !attendanceDoc.value) return;
-                    const seatKey = String(seat); 
-                    const records = attendanceDoc.value.records;
-                    const currentStatus = records[seatKey] || 'present';
-                    let nextStatus;
-                    switch (currentStatus) {
-                        case 'present': nextStatus = 'absent'; break;
-                        case 'absent': nextStatus = 'late'; break;
-                        case 'late': nextStatus = 'present'; break;
-                        default: nextStatus = 'present';
-                    }
-                    records[seatKey] = nextStatus;
-                };
-
-                const saveAttendance = async () => {
-                    if (!currentClass.value || !attendanceDoc.value) return;
-                    
-                    try {
-                        // 強制更新 leaveStudentIds 確保與 approvedLeaves 一致
-                        updateLeaveStudentsInAttendance(); 
-
-                        const { id, records, leaveStudentIds } = attendanceDoc.value;
-                        const dataToSave = {
-                            teacherId: userId.value,
-                            classId: currentClassId.value,
-                            date: selectedDate.value,
-                            records: records,
-                            leaveStudentIds: leaveStudentIds,
-                            lastUpdated: serverTimestamp()
-                        };
-
-                        if (id) {
-                            const docRef = doc(db.value, getCollectionPath('attendance'), id);
-                            await updateDoc(docRef, dataToSave);
-                        } else {
-                            await addDoc(collection(db.value, getCollectionPath('attendance')), dataToSave);
-                        }
-                        showModal("成功", "點名紀錄已儲存。");
-                    } catch (error) {
-                         console.error("Error saving attendance:", error);
-                        showModal("錯誤", "儲存點名紀錄失敗。");
-                    }
-                };
-                
-                const updateApplicationStatus = async (appId, status) => {
-                    try {
-                        const appDocRef = doc(db.value, getCollectionPath('leaveApplications'), appId);
-                        await updateDoc(appDocRef, { status: status });
-                        showModal("成功", `假單已${status === 'approved' ? '批准' : '駁回'}`);
-                    } catch (error) {
-                        console.error("Error updating application status:", error);
-                        showModal("錯誤", "更新假單狀態失敗。");
-                    }
-                };
-
-                const updateLeaveStudentsInAttendance = () => {
-                    if (!attendanceDoc.value) return;
-                    
-                    const leaveSeats = approvedLeaves.value.map(app => app.studentSeat);
-                    const uniqueLeaveSeats = [...new Set(leaveSeats)].map(String); 
-                    
-                    const currentLeaveIds = attendanceDoc.value.leaveStudentIds || [];
-                    if (JSON.stringify(uniqueLeaveSeats.sort()) !== JSON.stringify(currentLeaveIds.sort())) {
-                        attendanceDoc.value.leaveStudentIds = uniqueLeaveSeats;
-                    }
-                };
-                
-                // === Teacher Methods: Data Query and Export (NEW) ===
-                
-                const fetchLeaveData = async () => {
-                    if (!userId.value || !currentClassId.value || !currentClass.value) {
-                        showModal("錯誤", "請先選擇一個班級。");
-                        return;
-                    }
-                    
-                    isQuerying.value = true;
-                    queriedApplications.value = [];
-                    
-                    // 檢查日期格式
-                    if (queryFilter.value.startDate > queryFilter.value.endDate) {
-                         showModal("日期範圍錯誤", "起始日期不能晚於結束日期。");
-                         isQuerying.value = false;
-                         return;
-                    }
-
-                    // 構建查詢範圍 (將日期轉換為毫秒，以便在客戶端進行比較)
-                    const startRange = new Date(queryFilter.value.startDate).getTime(); // Milliseconds for JS comparison
-                    const endRange = new Date(queryFilter.value.endDate);
-                    endRange.setHours(23, 59, 59, 999); // 將結束日期時間設定為當天結束
-                    const endRangeTime = endRange.getTime();
-
-                    try {
-                        // --- 修正: 簡化 Firestore 查詢以避免複合索引錯誤 ---
-                        // 僅使用 teacherId 和 classId 進行篩選，剩下的在 JS 中處理。
-                        let q = query(
-                            collection(db.value, getCollectionPath('leaveApplications')),
-                            where("teacherId", "==", userId.value),
-                            where("classId", "==", currentClassId.value)
-                            // 移除複雜的 where 子句
-                        );
-
-                        const snapshot = await getDocs(q);
-                        
-                        const rawData = snapshot.docs.map(doc => {
-                            const data = doc.data();
-                            const className = currentClass.value.name;
-                            return { id: doc.id, className, ...data };
-                        });
-
-                        // --- 修正: 在客戶端 (JavaScript) 進行日期和狀態篩選 ---
-                        queriedApplications.value = rawData.filter(app => {
-                            
-                            // Date filtering: check if app.startDate is within the query range
-                            const appStartTime = new Date(app.startDate).getTime();
-                            
-                            // 篩選邏輯: 請假開始時間必須在查詢範圍內
-                            const dateFilterPasses = appStartTime >= startRange && appStartTime <= endRangeTime;
-                            
-                            // Status filtering
-                            const statusFilterPasses = queryFilter.value.status === 'all' || app.status === queryFilter.value.status;
-                            
-                            return dateFilterPasses && statusFilterPasses;
-                        });
-
-
-                    } catch (error) {
-                        console.error("Error fetching leave data:", error);
-                        // 更新錯誤訊息，指明已處理索引問題
-                        showModal("查詢錯誤", `查詢請假資料時發生錯誤：${error.message} (已修正索引問題，請確認其他連線或權限問題)`);
-                    } finally {
-                        isQuerying.value = false;
-                    }
-                };
-
-                const exportLeaveData = () => {
-                    if (queriedApplications.value.length === 0) {
-                        showModal("匯出錯誤", "請先查詢並確保有資料可匯出。");
-                        return;
-                    }
-                    
-                    if (typeof XLSX === 'undefined') {
-                        showModal("錯誤", "XLSX 匯出函式庫尚未載入。");
-                        return;
-                    }
-
-                    const dataToExport = queriedApplications.value.map(app => ({
-                        // 欄位標頭 (Column Headers in Traditional Chinese)
-                        '假單 ID': app.id,
-                        '老師 ID': app.teacherId,
-                        '班級名稱': app.className,
-                        '座號': app.studentSeat,
-                        '姓名': app.studentName,
-                        '假別': app.leaveType === 'sick' ? '病假' : (app.leaveType === 'personal' ? '事假' : app.leaveType),
-                        '請假開始時間': formatDateTime(app.startDate), // Reuse helper function
-                        '請假結束時間': formatDateTime(app.endDate),
-                        '請假事由': app.reason,
-                        '狀態': app.status === 'approved' ? '已批准' : (app.status === 'rejected' ? '已駁回' : '待審核'),
-                        '學生追蹤 UID': app.studentUid,
-                        '提交時間': app.submittedAt ? formatDateTime(app.submittedAt) : 'N/A', // Use helper func for Timestamp
-                    }));
-
-                    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
-                    const workbook = XLSX.utils.book_new();
-                    XLSX.utils.book_append_sheet(workbook, worksheet, "請假紀錄");
-
-                    const fileName = `${currentClass.value.name}_請假紀錄_${queryFilter.value.startDate}_至_${queryFilter.value.endDate}`;
-
-                    if (exportFormat.value === 'xlsx') {
-                        XLSX.writeFile(workbook, `${fileName}.xlsx`);
-                    } else { // csv
-                        // Convert to CSV string, using BOM for proper Chinese character encoding
-                        XLSX.writeFile(workbook, `${fileName}.csv`, { bookType: 'csv', FS: ',', BOM: true });
-                    }
-                    
-                    showModal("匯出成功", `已將 ${queriedApplications.value.length} 筆資料匯出為 ${exportFormat.value === 'xlsx' ? 'XLSX' : 'CSV'} 檔案。`);
-                };
-
-
-                // === Student Methods (已更新為連動選單邏輯) ===
-                
-                const fetchTeacherClasses = async () => {
-                    teacherClasses.value = [];
-                    selectedClassStudents.value = []; 
-                    leaveForm.value.classId = '';
-                    leaveForm.value.studentSeat = null;
-                    leaveForm.value.studentName = '';
-                    
-                    if (!leaveForm.value.teacherId) return;
-                    
-                    try {
-                        const classQuery = query(collection(db.value, getClassCollectionPath(leaveForm.value.teacherId)));
-                        const snapshot = await getDocs(classQuery);
-                        if(snapshot.empty) {
-                            console.log("Teacher classes not found for ID:", leaveForm.value.teacherId);
-                            return; 
-                        }
-                        // 將 students 陣列也一併載入
-                        teacherClasses.value = snapshot.docs.map(doc => ({ 
-                            id: doc.id, 
-                            name: doc.data().name,
-                            students: doc.data().students || [] // 確保有學生名單
-                        }));
-                        
-                        // 如果 classId 不存在，清空它
-                        const classExists = teacherClasses.value.some(c => c.id === leaveForm.value.classId);
-                        if (!classExists) {
-                            leaveForm.value.classId = '';
-                        }
-                        
-                    } catch (error) {
-                        console.error("Error fetching teacher classes:", error);
-                    }
-                };
-                
-                // 新增：當班級 ID 改變時，更新學生名單下拉式選單
-                watch(() => leaveForm.value.classId, (newClassId) => {
-                    selectedClassStudents.value = []; // 先清空
-                    leaveForm.value.studentSeat = null;
-                    leaveForm.value.studentName = '';
-
-                    if (newClassId) {
-                        const selectedClass = teacherClasses.value.find(c => c.id === newClassId);
-                        if (selectedClass) {
-                            // 學生名單是字串陣列，我們需要加上座號 (1-based index)
-                            selectedClassStudents.value = (selectedClass.students || []).map((name, index) => ({
-                                seat: index + 1,
-                                name: name
-                            }));
-                        }
-                    }
-                });
-
-                // 新增：當學生選擇姓名時，自動帶入座號
-                watch(() => leaveForm.value.studentName, (newName) => {
-                    const student = selectedClassStudents.value.find(s => s.name === newName);
-                    if (student) {
-                        leaveForm.value.studentSeat = student.seat;
-                    } else {
-                        leaveForm.value.studentSeat = null;
-                    }
-                });
-
-                const submitLeaveApplication = async () => {
-                    const form = leaveForm.value;
-                    if (!form.teacherId || !form.classId || !form.studentSeat || !form.studentName || !form.startDate || !form.endDate || !form.reason) {
-                        showModal("資料不齊全", "請填寫所有欄位！");
-                        return;
-                    }
-                    
-                    // 檢查座號和姓名是否匹配 (防止學生隨意填寫/選錯)
-                    const studentMatch = selectedClassStudents.value.find(s => s.name === form.studentName && s.seat === form.studentSeat);
-                    if (!studentMatch) {
-                         showModal("身份驗證失敗", "您所選的班級、座號與姓名不匹配，請重新選擇。");
-                         return;
-                    }
-
-                    if (new Date(form.endDate) < new Date(form.startDate)) {
-                         showModal("日期錯誤", "結束時間不能早於開始時間！");
-                        return;
-                    }
-                    if (!isStudentAuthenticated.value) {
-                         showModal("應用程式錯誤", "應用程式會話尚未啟動。");
-                        return;
-                    }
-                    
-                    try {
-                        await addDoc(collection(db.value, getCollectionPath('leaveApplications')), {
-                            teacherId: form.teacherId,
-                            classId: form.classId,
-                            studentSeat: String(form.studentSeat), 
-                            studentName: form.studentName,
-                            
-                            studentUid: userId.value,
-                            studentEmail: `${userId.value.substring(0, 8)}@app.session`,
-                            
-                            leaveType: form.leaveType,
-                            startDate: form.startDate, 
-                            endDate: form.endDate,   
-                            reason: form.reason,
-                            status: "pending", 
-                            submittedAt: serverTimestamp()
-                        });
-                        
-                        showModal("送出成功", "您的請假單已成功送出，請靜待老師審核。");
-                        // 重置部分表單
-                        leaveForm.value.studentSeat = null;
-                        leaveForm.value.studentName = '';
-                        leaveForm.value.startDate = '';
-                        leaveForm.value.endDate = '';
-                        leaveForm.value.reason = '';
-                    } catch (error) {
-                        console.error("Error submitting leave application:", error);
-                        showModal("送出失敗", "送出請假單時發生錯誤。");
-                    }
-                };
-
-                // === Watchers (不變) ===
-                watch(currentClassId, (newId) => {
-                    if(newId && selectedDate.value) {
-                        setupAttendanceListener(newId, selectedDate.value);
-                        setupApprovedLeaveListener(newId, selectedDate.value);
-                    } else {
-                        unSubAttendance();
-                        unSubApprovedLeaves();
-                        attendanceDoc.value = null;
-                        approvedLeaves.value = [];
-                    }
-                    csvUploadStatus.value = '';
-                    csvError.value = '';
-                    // 當班級改變時，清空查詢結果
-                    queriedApplications.value = [];
-                });
-                
-                watch(selectedDate, (newDate) => {
-                     if(currentClassId.value && newDate) {
-                        setupAttendanceListener(currentClassId.value, newDate);
-                        setupApprovedLeaveListener(currentClassId.value, newDate);
-                    } else {
-                        unSubAttendance();
-                        unSubApprovedLeaves();
-                        attendanceDoc.value = null;
-                        approvedLeaves.value = [];
-                    }
-                });
-                
-                watch(view, (newView) => {
-                    if (newView === 'teacher' && userId.value) {
-                        setupTeacherListeners(userId.value);
-                    }
-                });
-
-
-                // --- Lifecycle ---
-                onMounted(initializeFirebase);
-
-                return {
-                    isAuthReady, userId, view, modal, isStudentAuthenticated, 
-                    // Teacher
-                    classes, newClassName, currentClassId, currentClass,
-                    selectedDate, attendanceDoc, pendingApplications, approvedLeaves,
-                    allStudents, csvUploadStatus, csvError,
-                    addClass, renameClass, requestDeleteClass, 
-                    triggerFileUpload, handleFileUpload,
-                    saveAttendance, cycleAttendanceStatus, getStudentStatusClass, getStudentStatusText, getStudentStatusTextColor, isStudentOnLeave,
-                    updateApplicationStatus, formatDateTime,
-                    
-                    // Teacher Query/Export (NEW)
-                    queryFilter, queriedApplications, exportFormat, isQuerying,
-                    fetchLeaveData, exportLeaveData,
-                    
-                    // Student
-                    leaveForm, teacherClasses, selectedClassStudents,
-                    fetchTeacherClasses, submitLeaveApplication,
-                };
+                rosterListContainer.innerHTML = studentRoster.map(s => `
+                    <div class="roster-item">
+                        <span class="font-bold text-indigo-600">${s.number}號:</span>
+                        <span class="flex-grow text-right truncate">${s.name} (${s.id})</span>
+                    </div>
+                `).join('');
             }
-        }).mount('#app');
+            
+            // ② 每日點名
+            renderDailyRollCall();
+
+
+            // ③ 請假單審核 (待審核列表)
+            const pendingRequests = leaveRequests.filter(r => r.status === 'Pending');
+            const pendingList = document.getElementById('admin-pending-list');
+            
+            pendingList.innerHTML = pendingRequests.length === 0
+                ? '<p class="text-gray-500 p-4 bg-white rounded-lg border">目前沒有待審核的請假單。</p>'
+                : pendingRequests.map(r => {
+                    const submittedAtString = r.submittedAt && typeof r.submittedAt.toDate === 'function'
+                        ? new Date(r.submittedAt.toDate()).toLocaleString('zh-TW')
+                        : '時間載入錯誤';
+                    return `
+                    <li class="p-4 border border-gray-200 bg-white rounded-lg shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center">
+                        <div class="mb-2 md:mb-0 flex-grow">
+                            <!-- 顯示日期時間範圍 -->
+                            <p class="font-semibold text-gray-800">
+                                <span class="text-blue-600">${r.userName} (${r.studentId})</span> 
+                                <span class="text-sm font-normal text-gray-600">(請假: ${formatDateTime(r.startDateTime)} ~ ${formatDateTime(r.endDateTime)})</span>
+                            </p>
+                            <p class="text-sm text-gray-600">原因: ${r.reason}</p>
+                            <p class="text-xs text-gray-400">提交於: ${submittedAtString}</p>
+                        </div>
+                        <div class="flex space-x-2 mt-2 md:mt-0">
+                            <button onclick="updateLeaveStatus('${r.id}', 'Approved')" 
+                                    class="px-3 py-1 text-sm font-medium text-white bg-green-500 rounded-lg hover:bg-green-600 transition duration-150 shadow">
+                                批准
+                            </button>
+                            <button onclick="updateLeaveStatus('${r.id}', 'Rejected')" 
+                                    class="px-3 py-1 text-sm font-medium text-white bg-red-500 rounded-lg hover:bg-red-600 transition duration-150 shadow">
+                                拒絕
+                            </button>
+                        </div>
+                    </li>
+                `;}).join('');
+            
+            // ④ 歷史請假資料查詢與匯出
+            const leaveQueryResultsList = document.getElementById('query-result-list');
+            const exportCsvBtn = document.getElementById('export-csv-btn');
+            
+            document.getElementById('query-count').textContent = queryResults.length;
+            exportCsvBtn.disabled = queryResults.length === 0;
+
+            if (queryResults.length > 0) {
+                 leaveQueryResultsList.innerHTML = `
+                    ${queryResults.map(r => `
+                        <li class="p-2 border-b border-gray-100 text-sm">
+                            <div class="flex justify-between items-start">
+                                <!-- 顯示日期時間範圍 -->
+                                <div class="font-medium text-gray-700">
+                                    ${formatDateTime(r.startDateTime)} ~ ${formatDateTime(r.endDateTime)}
+                                    <span class="text-gray-500 ml-2"> - ${r.userName} (${r.studentId})</span>
+                                </div>
+                                <span class="text-xs font-semibold p-1 px-2 rounded-full ${r.status === 'Approved' ? 'bg-green-100 text-green-700' : r.status === 'Rejected' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}">
+                                    ${r.status === 'Approved' ? '已批准' : r.status === 'Rejected' ? '已拒絕' : '待審核'}
+                                </span>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1">原因: ${r.reason}</p>
+                        </li>
+                    `).join('')}
+                    <li class="p-2 pt-3 text-center">
+                        <button onclick="clearQueryResults()" class="text-sm text-blue-500 hover:text-blue-700">
+                            清除查詢結果
+                        </button>
+                    </li>
+                 `;
+            } else {
+                leaveQueryResultsList.innerHTML = '<p class="text-gray-500 text-sm p-2">請輸入日期範圍進行查詢。</p>';
+            }
+        }
+        
+        /**
+         * 渲染每日點名網格，使用新的樣式。
+         */
+        function renderDailyRollCall() {
+            const rollCallGrid = document.getElementById('roll-call-grid');
+            const saveRollCallBtn = document.getElementById('save-roll-call-btn');
+
+            if (studentRoster.length === 0) {
+                rollCallGrid.innerHTML = '<p class="text-gray-500 col-span-full text-center">請先匯入班級名單。</p>';
+                saveRollCallBtn.disabled = true;
+                return;
+            }
+            
+            saveRollCallBtn.disabled = false;
+            document.querySelector('#admin-view-content .section-header .text-xl span').textContent = `(${className})`;
+
+            rollCallGrid.innerHTML = studentRoster.map(student => {
+                const status = dailyRollCallState[student.id] || 'Present';
+                // 根據狀態設定顯示文字和 CSS 類別
+                const statusText = status === 'Present' ? '到' : 
+                                   status === 'Absent' ? '缺' : 
+                                   status === 'Late' ? '遲' : '請假'; 
+                // Class for the Number Block (Green/Red/etc.)
+                const statusClass = status === 'Leave' ? 'Leave' : status; 
+                // Class for the Status Text (always a dark color)
+                const statusTextClass = 'rollcall-status-text';
+
+
+                return `
+                    <!-- 點擊整個區塊來切換狀態，以符合圖片中點名方塊的樣式 -->
+                    <div class="flex flex-col items-center justify-center p-1 cursor-pointer" onclick="toggleStudentStatus('${student.id}')">
+                        <!-- 狀態文字 (到/缺/遲/請假) -->
+                        <span class="text-sm font-semibold mb-1 ${statusTextClass}">${statusText}</span>
+                        <!-- 學生號碼方塊 (顏色根據狀態變化) -->
+                        <div class="rollcall-number-block ${statusClass}">
+                            ${student.number}
+                        </div>
+                        <!-- 學生姓名縮寫/ID -->
+                        <span class="text-xs font-medium text-gray-600 mt-1 truncate">(${student.name.substring(0, 5)})</span>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        // --- ④ 歷史請假查詢與匯出功能 (保持不變) ---
+
+        window.searchLeaveHistory = function() {
+            const startDateInput = document.getElementById('start-date-input').value;
+            const endDateInput = document.getElementById('end-date-input').value;
+
+            if (!startDateInput || !endDateInput) {
+                showMessage('請選擇起始日期和結束日期。', 'warning');
+                return;
+            }
+
+            const startDate = new Date(startDateInput + 'T00:00:00').getTime();
+            const endDate = new Date(endDateInput + 'T23:59:59').getTime(); 
+            
+            if (isNaN(startDate) || isNaN(endDate) || startDate > endDate) {
+                showMessage('日期範圍無效，請檢查您的輸入。', 'error');
+                return;
+            }
+
+            queryResults = leaveRequests.filter(request => {
+                // 由於 Firestore 儲存的是 YYYY-MM-DDTHH:MM，我們只需要提取日期部分進行比較
+                const requestDateStr = request.startDateTime ? request.startDateTime.split('T')[0] : null;
+                if (!requestDateStr) return false;
+                
+                // 將請假起始日期轉換為當天 00:00:00 的時間戳記
+                const requestStartTime = new Date(requestDateStr + 'T00:00:00').getTime();
+
+                // 檢查請假起始日期是否在管理員查詢的日期範圍內
+                // 這裡假設管理員查詢是基於 "請假開始日" 落在查詢區間內
+                return requestStartTime >= startDate && requestStartTime <= endDate;
+            });
+            
+            // 根據請假起始日期時間排序
+            queryResults.sort((a, b) => new Date(b.startDateTime).getTime() - new Date(a.startDateTime).getTime()); 
+
+            renderAdminRecords();
+            showMessage(`查詢完成，找到 ${queryResults.length} 筆紀錄。`, 'success');
+        }
+        
+        window.exportLeaveHistory = function() {
+            if (queryResults.length === 0) {
+                showMessage('沒有查詢結果可以匯出。', 'warning');
+                return;
+            }
+
+            let csvContent = "data:text/csv;charset=utf-8,\uFEFF"; 
+
+            // 標題行
+            csvContent += "請假起始日期時間,請假結束日期時間,學生名稱,學號,狀態,請假原因,提交時間\n";
+
+            // 數據行
+            queryResults.forEach(item => {
+                const submittedTimeString = item.submittedAt && typeof item.submittedAt.toDate === 'function'
+                    ? new Date(item.submittedAt.toDate()).toLocaleString('zh-TW')
+                    : 'N/A';
+                
+                const statusText = item.status === 'Approved' ? '已批准' : item.status === 'Rejected' ? '已拒絕' : '待審核';
+                
+                const row = [
+                    formatDateTime(item.startDateTime), // Full date-time
+                    formatDateTime(item.endDateTime),   // Full date-time
+                    item.userName,
+                    item.studentId || 'N/A', 
+                    statusText,
+                    `"${item.reason.replace(/"/g, '""').replace(/\n/g, ' ')}"`, 
+                    submittedTimeString
+                ];
+                csvContent += row.join(',') + "\n";
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `leave_records_${new Date().toISOString().split('T')[0]}.csv`);
+            document.body.appendChild(link); 
+            link.click();
+            document.body.removeChild(link); 
+            
+            showMessage(`已成功匯出 ${queryResults.length} 筆請假記錄。`, 'success');
+        }
+        
+        window.clearQueryResults = function() {
+            queryResults = [];
+            document.getElementById('start-date-input').value = '';
+            document.getElementById('end-date-input').value = '';
+            renderAdminRecords();
+            showMessage('查詢結果已清除。', 'info');
+        }
+
+
+        // 程式啟動點
+        window.onload = function() {
+            if (typeof initializeApp === 'undefined') {
+                console.error("Firebase SDK 載入失敗。");
+                showMessage('系統核心載入失敗，請檢查網路連接。', 'error');
+                return;
+            }
+            initFirebase();
+            // 初始狀態為入口畫面
+            setAppState('entry');
+        }
     </script>
 </body>
 </html>
